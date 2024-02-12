@@ -1,6 +1,6 @@
-# $ZUS token smart contract
+# Zeus Exchange smart contracts
 
-- Language: Solidity v0.8.20
+- Language: Solidity v0.8.20, v0.6.12
 
 - Project framework: hardhat (ethers) + typechain
 
@@ -8,7 +8,7 @@
 
 ## Deployed
 
-coming soon
+[Arbitrun 0x11111111111e6a0e96332F2bdb9A2b27701998c9](https://arbiscan.io/token/0x11111111111e6a0e96332F2bdb9A2b27701998c9)
 
 ## Installation & Usage
 
@@ -52,7 +52,7 @@ For .ts files
 yarn prettier:ts
 ```
 
-### Deploy token
+### Deploy $ZUS token
 
 1. Check network in ```hardhat.config.ts``` ([docs](https://hardhat.org/config/))
 
