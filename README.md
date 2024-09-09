@@ -8,7 +8,7 @@
 
 ## Deployed
 
-[Arbitrun 0x11111111111e6a0e96332F2bdb9A2b27701998c9](https://arbiscan.io/token/0x11111111111e6a0e96332F2bdb9A2b27701998c9)
+5ire chain [0x467e3C0D9003c724755d4d5c1FcB0BaD3fD8b963](https://testnet.5irescan.io/contract/evm/0x467e3C0D9003c724755d4d5c1FcB0BaD3fD8b963)
 
 ## Installation & Usage
 
