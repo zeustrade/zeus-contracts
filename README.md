@@ -8,7 +8,7 @@
 
 ## Deployed
 
-5ire chain [0x467e3C0D9003c724755d4d5c1FcB0BaD3fD8b963](https://testnet.5irescan.io/contract/evm/0x467e3C0D9003c724755d4d5c1FcB0BaD3fD8b963)
+5ire chain testnet [0x467e3C0D9003c724755d4d5c1FcB0BaD3fD8b963](https://testnet.5irescan.io/contract/evm/0x467e3C0D9003c724755d4d5c1FcB0BaD3fD8b963)
 
 ## Installation & Usage
 
