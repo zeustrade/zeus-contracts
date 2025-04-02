@@ -1,0 +1,40 @@
+w5ire bufferAmount 50
+usdt bufferAmount 5000000000000000
+usdc bufferAmount 5000000000000000
+wbtc bufferAmount 1000
+eth bufferAmount 2056
+
+w5ire reservedAmount 39710167.96378233
+usdt reservedAmount 83481385.899655
+usdc reservedAmount 435143998.753384
+wbtc reservedAmount 563.14054321
+eth reservedAmount 1056.4391783613203
+
+w5ire tokenBalances 42167448.100133345
+usdt tokenBalances 40000000117473640
+usdc tokenBalances 40000000001812860
+wbtc tokenBalances 200000401136.9915
+eth tokenBalances 501175.32435705373
+
+w5ire usdgAmounts 1802661.067094748
+usdt usdgAmounts 19998000162501516
+usdc usdgAmounts 20000000060004596
+wbtc usdgAmounts 13486423349712980
+eth usdgAmounts 1323365534.678092
+
+w5ire maxUsdgAmounts 0
+usdt maxUsdgAmounts 0
+usdc maxUsdgAmounts 0
+wbtc maxUsdgAmounts 0
+eth maxUsdgAmounts 0
+
+w5ire guaranteedUsd 260112714354754000
+usdt guaranteedUsd 0
+usdc guaranteedUsd 0
+wbtc guaranteedUsd 37992129061557050000
+eth guaranteedUsd 2359058524408463400
+
+
+
+
+

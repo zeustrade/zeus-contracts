@@ -126,4 +126,5 @@ coverage.json
 typechain
 storageLayout
 typechain-types
-flamegraph.html
+out
+docgen/generated

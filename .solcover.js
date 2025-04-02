@@ -1,5 +1,9 @@
 module.exports = {
-    skipFiles: [],
+    skipFiles: [
+        'mocks',
+        'interface',
+        'testnet'
+    ],
     modifierWhitelist: [
         'onlyInitializing',
         'initializer',

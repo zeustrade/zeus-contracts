@@ -12,6 +12,8 @@ import "./interfaces/IVault.sol";
 import "./interfaces/IVaultUtils.sol";
 import "./interfaces/IVaultPriceFeed.sol";
 
+import "hardhat/console.sol";
+
 contract Vault is ReentrancyGuard, IVault {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
@@ -450,8 +452,10 @@ contract Vault is ReentrancyGuard, IVault {
         updateCumulativeFundingRate(_token, _token);
 
         uint256 price = getMinPrice(_token);
+        console.log("price: ", price);
 
         uint256 usdgAmount = tokenAmount.mul(price).div(PRICE_PRECISION);
+        console.log("usdgAmount: ", usdgAmount);
         usdgAmount = adjustForDecimals(usdgAmount, _token, usdg);
         _validate(usdgAmount > 0, 18);
 
@@ -472,39 +476,39 @@ contract Vault is ReentrancyGuard, IVault {
     }
 
     function sellUSDG(address _token, address _receiver) external override nonReentrant returns (uint256) {
-        _validateManager();
-        _validate(whitelistedTokens[_token], 19);
-        useSwapPricing = true;
+        // _validateManager();
+        // _validate(whitelistedTokens[_token], 19);
+        // useSwapPricing = true;
 
-        uint256 usdgAmount = _transferIn(usdg);
-        _validate(usdgAmount > 0, 20);
+        // uint256 usdgAmount = _transferIn(usdg);
+        // _validate(usdgAmount > 0, 20);
 
-        updateCumulativeFundingRate(_token, _token);
+        // updateCumulativeFundingRate(_token, _token);
 
-        uint256 redemptionAmount = getRedemptionAmount(_token, usdgAmount);
-        _validate(redemptionAmount > 0, 21);
+        // uint256 redemptionAmount = getRedemptionAmount(_token, usdgAmount);
+        // _validate(redemptionAmount > 0, 21);
 
-        _decreaseUsdgAmount(_token, usdgAmount);
-        _decreasePoolAmount(_token, redemptionAmount);
+        // _decreaseUsdgAmount(_token, usdgAmount);
+        // _decreasePoolAmount(_token, redemptionAmount);
 
-        IUSDG(usdg).burn(address(this), usdgAmount);
+        // IUSDG(usdg).burn(address(this), usdgAmount);
 
-        // the _transferIn call increased the value of tokenBalances[usdg]
-        // usually decreases in token balances are synced by calling _transferOut
-        // however, for usdg, the tokens are burnt, so _updateTokenBalance should
-        // be manually called to record the decrease in tokens
-        _updateTokenBalance(usdg);
+        // // the _transferIn call increased the value of tokenBalances[usdg]
+        // // usually decreases in token balances are synced by calling _transferOut
+        // // however, for usdg, the tokens are burnt, so _updateTokenBalance should
+        // // be manually called to record the decrease in tokens
+        // _updateTokenBalance(usdg);
 
-        uint256 feeBasisPoints = vaultUtils.getSellUsdgFeeBasisPoints(_token, usdgAmount);
-        uint256 amountOut = _collectSwapFees(_token, redemptionAmount, feeBasisPoints);
-        _validate(amountOut > 0, 22);
+        // uint256 feeBasisPoints = vaultUtils.getSellUsdgFeeBasisPoints(_token, usdgAmount);
+        // uint256 amountOut = _collectSwapFees(_token, redemptionAmount, feeBasisPoints);
+        // _validate(amountOut > 0, 22);
 
-        _transferOut(_token, amountOut, _receiver);
+        // _transferOut(_token, amountOut, _receiver);
 
-        emit SellUSDG(_receiver, _token, usdgAmount, amountOut, feeBasisPoints);
+        // emit SellUSDG(_receiver, _token, usdgAmount, amountOut, feeBasisPoints);
 
-        useSwapPricing = false;
-        return amountOut;
+        // useSwapPricing = false;
+        // return amountOut;
     }
 
     function swap(address _tokenIn, address _tokenOut, address _receiver) external override nonReentrant returns (uint256) {

@@ -162,7 +162,7 @@ contract VaultPriceFeed is IVaultPriceFeed {
     }
 
     function getPriceV1(address _token, bool _maximise, bool _includeAmmPrice) public view returns (uint256) {
-        uint256 price = getPrimaryPrice(_token, _maximise);
+        uint256 price;
 
         if (_includeAmmPrice && isAmmEnabled) {
             uint256 ammPrice = getAmmPrice(_token);
@@ -178,6 +178,8 @@ contract VaultPriceFeed is IVaultPriceFeed {
 
         if (isSecondaryPriceEnabled) {
             price = getSecondaryPrice(_token, price, _maximise);
+        } else {
+            price = getPrimaryPrice(_token, _maximise);
         }
 
         if (strictStableTokens[_token]) {
@@ -209,7 +211,12 @@ contract VaultPriceFeed is IVaultPriceFeed {
     }
 
     function getPriceV2(address _token, bool _maximise, bool _includeAmmPrice) public view returns (uint256) {
-        uint256 price = getPrimaryPrice(_token, _maximise);
+        uint256 price;
+
+        if (strictStableTokens[_token]) {
+
+            return ONE_USD;
+        }
 
         if (_includeAmmPrice && isAmmEnabled) {
             price = getAmmPriceV2(_token, _maximise, price);
@@ -217,26 +224,30 @@ contract VaultPriceFeed is IVaultPriceFeed {
 
         if (isSecondaryPriceEnabled) {
             price = getSecondaryPrice(_token, price, _maximise);
+        } else {
+            price = getPrimaryPrice(_token, _maximise);
         }
 
-        if (strictStableTokens[_token]) {
-            uint256 delta = price > ONE_USD ? price.sub(ONE_USD) : ONE_USD.sub(price);
-            if (delta <= maxStrictPriceDeviation) {
-                return ONE_USD;
-            }
+        return price;
 
-            // if _maximise and price is e.g. 1.02, return 1.02
-            if (_maximise && price > ONE_USD) {
-                return price;
-            }
+        // if (strictStableTokens[_token]) {
+        //     uint256 delta = price > ONE_USD ? price.sub(ONE_USD) : ONE_USD.sub(price);
+        //     if (delta <= maxStrictPriceDeviation) {
+        //         return ONE_USD;
+        //     }
 
-            // if !_maximise and price is e.g. 0.98, return 0.98
-            if (!_maximise && price < ONE_USD) {
-                return price;
-            }
+        //     // if _maximise and price is e.g. 1.02, return 1.02
+        //     if (_maximise && price > ONE_USD) {
+        //         return price;
+        //     }
 
-            return ONE_USD;
-        }
+        //     // if !_maximise and price is e.g. 0.98, return 0.98
+        //     if (!_maximise && price < ONE_USD) {
+        //         return price;
+        //     }
+
+        //     return ONE_USD;
+        // }
 
         uint256 _spreadBasisPoints = spreadBasisPoints[_token];
 
@@ -273,18 +284,23 @@ contract VaultPriceFeed is IVaultPriceFeed {
     }
 
     function getLatestPrimaryPrice(address _token) public override view returns (uint256) {
-        address priceFeedAddress = priceFeeds[_token];
-        require(priceFeedAddress != address(0), "VaultPriceFeed: invalid price feed");
+        // address priceFeedAddress = priceFeeds[_token];
+        // require(priceFeedAddress != address(0), "VaultPriceFeed: invalid price feed");
 
-        IPriceFeed priceFeed = IPriceFeed(priceFeedAddress);
+        // IPriceFeed priceFeed = IPriceFeed(priceFeedAddress);
 
-        int256 price = priceFeed.latestAnswer();
-        require(price > 0, "VaultPriceFeed: invalid price");
+        
 
-        return uint256(price);
+        // int256 price = priceFeed.latestAnswer();
+        // require(price > 0, "VaultPriceFeed: invalid price");
+
+        // return uint256(price);
+
+        return getSecondaryPrice(_token, 0, true);
     }
 
     function getPrimaryPrice(address _token, bool _maximise) public override view returns (uint256) {
+        return getSecondaryPrice(_token, 0, _maximise);
         address priceFeedAddress = priceFeeds[_token];
         require(priceFeedAddress != address(0), "VaultPriceFeed: invalid price feed");
 
@@ -297,6 +313,7 @@ contract VaultPriceFeed is IVaultPriceFeed {
         }
 
         IPriceFeed priceFeed = IPriceFeed(priceFeedAddress);
+
 
         uint256 price = 0;
         uint80 roundId = priceFeed.latestRound();
