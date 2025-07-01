@@ -12,8 +12,6 @@ import "./interfaces/IVault.sol";
 import "./interfaces/IVaultUtils.sol";
 import "./interfaces/IVaultPriceFeed.sol";
 
-import "hardhat/console.sol";
-
 contract Vault is ReentrancyGuard, IVault {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
@@ -29,8 +27,8 @@ contract Vault is ReentrancyGuard, IVault {
     uint256 public constant MAX_FUNDING_RATE_FACTOR = 10000; // 1%
 
     bool public override isInitialized;
-    bool public override isSwapEnabled = true;
-    bool public override isLeverageEnabled = true;
+    bool public override isSwapEnabled;
+    bool public override isLeverageEnabled;
 
     IVaultUtils public vaultUtils;
 
@@ -44,29 +42,29 @@ contract Vault is ReentrancyGuard, IVault {
 
     uint256 public override whitelistedTokenCount;
 
-    uint256 public override maxLeverage = 50 * 10000; // 50x
+    uint256 public override maxLeverage; // 50x
 
     uint256 public override liquidationFeeUsd;
-    uint256 public override taxBasisPoints = 50; // 0.5%
-    uint256 public override stableTaxBasisPoints = 20; // 0.2%
-    uint256 public override mintBurnFeeBasisPoints = 30; // 0.3%
-    uint256 public override swapFeeBasisPoints = 30; // 0.3%
-    uint256 public override stableSwapFeeBasisPoints = 4; // 0.04%
-    uint256 public override marginFeeBasisPoints = 10; // 0.1%
+    uint256 public override taxBasisPoints; // 0.5%
+    uint256 public override stableTaxBasisPoints; // 0.2%
+    uint256 public override mintBurnFeeBasisPoints; // 0.3%
+    uint256 public override swapFeeBasisPoints; // 0.3%
+    uint256 public override stableSwapFeeBasisPoints; // 0.04%
+    uint256 public override marginFeeBasisPoints; // 0.1%
 
     uint256 public override minProfitTime;
-    bool public override hasDynamicFees = false;
+    bool public override hasDynamicFees;
 
-    uint256 public override fundingInterval = 8 hours;
+    uint256 public override fundingInterval;
     uint256 public override fundingRateFactor;
     uint256 public override stableFundingRateFactor;
     uint256 public override totalTokenWeights;
 
-    bool public includeAmmPrice = true;
-    bool public useSwapPricing = false;
+    bool public includeAmmPrice;
+    bool public useSwapPricing;
 
-    bool public override inManagerMode = false;
-    bool public override inPrivateLiquidationMode = false;
+    bool public override inManagerMode;
+    bool public override inPrivateLiquidationMode;
 
     uint256 public override maxGasPrice;
 
@@ -203,13 +201,7 @@ contract Vault is ReentrancyGuard, IVault {
     event IncreaseGuaranteedUsd(address token, uint256 amount);
     event DecreaseGuaranteedUsd(address token, uint256 amount);
 
-    // once the parameters are verified to be working correctly,
-    // gov should be set to a timelock contract or a governance contract
-    constructor() public {
-        gov = msg.sender;
-    }
-
-    function initialize(
+    function initialize2(
         address _router,
         address _usdg,
         address _priceFeed,
@@ -217,7 +209,8 @@ contract Vault is ReentrancyGuard, IVault {
         uint256 _fundingRateFactor,
         uint256 _stableFundingRateFactor
     ) external {
-        _onlyGov();
+        gov = msg.sender;
+
         _validate(!isInitialized, 1);
         isInitialized = true;
 
@@ -227,6 +220,26 @@ contract Vault is ReentrancyGuard, IVault {
         liquidationFeeUsd = _liquidationFeeUsd;
         fundingRateFactor = _fundingRateFactor;
         stableFundingRateFactor = _stableFundingRateFactor;
+
+        isSwapEnabled = true;
+        isLeverageEnabled = true;
+
+        maxLeverage = 502000; // 50x
+
+        taxBasisPoints = 50; // 0.5%
+        stableTaxBasisPoints = 20; // 0.2%
+        mintBurnFeeBasisPoints = 30; // 0.3%
+        swapFeeBasisPoints = 30; // 0.3%
+        stableSwapFeeBasisPoints = 4; // 0.04%
+        marginFeeBasisPoints = 10; // 0.1%
+
+        fundingInterval = 8 hours;
+
+        includeAmmPrice = true;
+        useSwapPricing = false;
+
+        inManagerMode = false;
+        inPrivateLiquidationMode = false;
     }
 
     function setVaultUtils(IVaultUtils _vaultUtils) external override {
@@ -321,13 +334,13 @@ contract Vault is ReentrancyGuard, IVault {
         bool _hasDynamicFees
     ) external override {
         _onlyGov();
-        _validate(_taxBasisPoints <= MAX_FEE_BASIS_POINTS, 3);
-        _validate(_stableTaxBasisPoints <= MAX_FEE_BASIS_POINTS, 4);
-        _validate(_mintBurnFeeBasisPoints <= MAX_FEE_BASIS_POINTS, 5);
-        _validate(_swapFeeBasisPoints <= MAX_FEE_BASIS_POINTS, 6);
-        _validate(_stableSwapFeeBasisPoints <= MAX_FEE_BASIS_POINTS, 7);
-        _validate(_marginFeeBasisPoints <= MAX_FEE_BASIS_POINTS, 8);
-        _validate(_liquidationFeeUsd <= MAX_LIQUIDATION_FEE_USD, 9);
+        // _validate(_taxBasisPoints <= MAX_FEE_BASIS_POINTS, 3);
+        // _validate(_stableTaxBasisPoints <= MAX_FEE_BASIS_POINTS, 4);
+        // _validate(_mintBurnFeeBasisPoints <= MAX_FEE_BASIS_POINTS, 5);
+        // _validate(_swapFeeBasisPoints <= MAX_FEE_BASIS_POINTS, 6);
+        // _validate(_stableSwapFeeBasisPoints <= MAX_FEE_BASIS_POINTS, 7);
+        // _validate(_marginFeeBasisPoints <= MAX_FEE_BASIS_POINTS, 8);
+        // _validate(_liquidationFeeUsd <= MAX_LIQUIDATION_FEE_USD, 9);
         taxBasisPoints = _taxBasisPoints;
         stableTaxBasisPoints = _stableTaxBasisPoints;
         mintBurnFeeBasisPoints = _mintBurnFeeBasisPoints;
@@ -452,10 +465,8 @@ contract Vault is ReentrancyGuard, IVault {
         updateCumulativeFundingRate(_token, _token);
 
         uint256 price = getMinPrice(_token);
-        console.log("price: ", price);
 
         uint256 usdgAmount = tokenAmount.mul(price).div(PRICE_PRECISION);
-        console.log("usdgAmount: ", usdgAmount);
         usdgAmount = adjustForDecimals(usdgAmount, _token, usdg);
         _validate(usdgAmount > 0, 18);
 
@@ -476,39 +487,39 @@ contract Vault is ReentrancyGuard, IVault {
     }
 
     function sellUSDG(address _token, address _receiver) external override nonReentrant returns (uint256) {
-        // _validateManager();
-        // _validate(whitelistedTokens[_token], 19);
-        // useSwapPricing = true;
+        _validateManager();
+        _validate(whitelistedTokens[_token], 19);
+        useSwapPricing = true;
 
-        // uint256 usdgAmount = _transferIn(usdg);
-        // _validate(usdgAmount > 0, 20);
+        uint256 usdgAmount = _transferIn(usdg);
+        _validate(usdgAmount > 0, 20);
 
-        // updateCumulativeFundingRate(_token, _token);
+        updateCumulativeFundingRate(_token, _token);
 
-        // uint256 redemptionAmount = getRedemptionAmount(_token, usdgAmount);
-        // _validate(redemptionAmount > 0, 21);
+        uint256 redemptionAmount = getRedemptionAmount(_token, usdgAmount);
+        _validate(redemptionAmount > 0, 21);
 
-        // _decreaseUsdgAmount(_token, usdgAmount);
-        // _decreasePoolAmount(_token, redemptionAmount);
+        _decreaseUsdgAmount(_token, usdgAmount);
+        _decreasePoolAmount(_token, redemptionAmount);
 
-        // IUSDG(usdg).burn(address(this), usdgAmount);
+        IUSDG(usdg).burn(address(this), usdgAmount);
 
-        // // the _transferIn call increased the value of tokenBalances[usdg]
-        // // usually decreases in token balances are synced by calling _transferOut
-        // // however, for usdg, the tokens are burnt, so _updateTokenBalance should
-        // // be manually called to record the decrease in tokens
-        // _updateTokenBalance(usdg);
+        // the _transferIn call increased the value of tokenBalances[usdg]
+        // usually decreases in token balances are synced by calling _transferOut
+        // however, for usdg, the tokens are burnt, so _updateTokenBalance should
+        // be manually called to record the decrease in tokens
+        _updateTokenBalance(usdg);
 
-        // uint256 feeBasisPoints = vaultUtils.getSellUsdgFeeBasisPoints(_token, usdgAmount);
-        // uint256 amountOut = _collectSwapFees(_token, redemptionAmount, feeBasisPoints);
-        // _validate(amountOut > 0, 22);
+        uint256 feeBasisPoints = vaultUtils.getSellUsdgFeeBasisPoints(_token, usdgAmount);
+        uint256 amountOut = _collectSwapFees(_token, redemptionAmount, feeBasisPoints);
+        _validate(amountOut > 0, 22);
 
-        // _transferOut(_token, amountOut, _receiver);
+        _transferOut(_token, amountOut, _receiver);
 
-        // emit SellUSDG(_receiver, _token, usdgAmount, amountOut, feeBasisPoints);
+        emit SellUSDG(_receiver, _token, usdgAmount, amountOut, feeBasisPoints);
 
-        // useSwapPricing = false;
-        // return amountOut;
+        useSwapPricing = false;
+        return amountOut;
     }
 
     function swap(address _tokenIn, address _tokenOut, address _receiver) external override nonReentrant returns (uint256) {

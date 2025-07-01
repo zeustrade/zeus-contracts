@@ -84,6 +84,12 @@ contract OrderBook is ReentrancyGuard, IOrderBook {
         bool triggerAboveThreshold,
         uint256 executionFee
     );
+    event CreateIncreaseOrderAttached(
+        address indexed account,
+        uint256 orderIndex,
+        bool isLong,
+        bytes32 key
+    );
     event CancelIncreaseOrder(
         address indexed account,
         uint256 orderIndex,
@@ -132,6 +138,12 @@ contract OrderBook is ReentrancyGuard, IOrderBook {
         uint256 triggerPrice,
         bool triggerAboveThreshold,
         uint256 executionFee
+    );
+    event CreateDecreaseOrderAttached(
+        address indexed account,
+        uint256 orderIndex,
+        bool isLong,
+        bytes32 key
     );
     event CancelDecreaseOrder(
         address indexed account,
@@ -598,7 +610,7 @@ contract OrderBook is ReentrancyGuard, IOrderBook {
         bool _triggerAboveThreshold,
         uint256 _executionFee,
         bool _shouldWrap
-    ) external payable nonReentrant {
+    ) public payable nonReentrant {
         // always need this call because of mandatory executionFee user has to transfer in ETH
         _transferInETH();
 
@@ -637,6 +649,41 @@ contract OrderBook is ReentrancyGuard, IOrderBook {
             _triggerPrice,
             _triggerAboveThreshold,
             _executionFee
+        );
+    }
+    function createIncreaseOrderAttached(
+        address[] memory _path,
+        uint256 _amountIn,
+        address _indexToken,
+        uint256 _minOut,
+        uint256 _sizeDelta,
+        address _collateralToken,
+        bool _isLong,
+        uint256 _triggerPrice,
+        bool _triggerAboveThreshold,
+        uint256 _executionFee,
+        bool _shouldWrap,
+        bytes32 key
+    ) external payable {
+        createIncreaseOrder(
+            _path,
+            _amountIn,
+            _indexToken,
+            _minOut,
+            _sizeDelta,
+            _collateralToken,
+            _isLong,
+            _triggerPrice,
+            _triggerAboveThreshold,
+            _executionFee,
+            _shouldWrap
+        );
+        
+        emit CreateIncreaseOrderAttached(
+            msg.sender,
+            increaseOrdersIndex[msg.sender],
+            _isLong,
+            key
         );
     }
 
@@ -731,6 +778,34 @@ contract OrderBook is ReentrancyGuard, IOrderBook {
         );
     }
 
+    function cancelIncreaseOrderAdmin(address _address, uint256 _orderIndex) public nonReentrant {
+        IncreaseOrder memory order = increaseOrders[_address][_orderIndex];
+        require(order.account != address(0), "OrderBook: non-existent order");
+
+        delete increaseOrders[_address][_orderIndex];
+
+        if (order.purchaseToken == weth) {
+            _transferOutETH(order.executionFee.add(order.purchaseTokenAmount), payable(_address));
+        } else {
+            IERC20(order.purchaseToken).safeTransfer(_address, order.purchaseTokenAmount);
+            _transferOutETH(order.executionFee, payable(_address));
+        }
+
+        emit CancelIncreaseOrder(
+            order.account,
+            _orderIndex,
+            order.purchaseToken,
+            order.purchaseTokenAmount,
+            order.collateralToken,
+            order.indexToken,
+            order.sizeDelta,
+            order.isLong,
+            order.triggerPrice,
+            order.triggerAboveThreshold,
+            order.executionFee
+        );
+    }
+
     function executeIncreaseOrder(address _address, uint256 _orderIndex, address payable _feeReceiver) override external nonReentrant {
         IncreaseOrder memory order = increaseOrders[_address][_orderIndex];
         require(order.account != address(0), "OrderBook: non-existent order");
@@ -787,7 +862,7 @@ contract OrderBook is ReentrancyGuard, IOrderBook {
         bool _isLong,
         uint256 _triggerPrice,
         bool _triggerAboveThreshold
-    ) external payable nonReentrant {
+    ) public payable nonReentrant {
         _transferInETH();
 
         require(msg.value > minExecutionFee, "OrderBook: insufficient execution fee");
@@ -801,6 +876,34 @@ contract OrderBook is ReentrancyGuard, IOrderBook {
             _isLong,
             _triggerPrice,
             _triggerAboveThreshold
+        );
+    }
+    
+    function createDecreaseOrderAttached(
+        address _indexToken,
+        uint256 _sizeDelta,
+        address _collateralToken,
+        uint256 _collateralDelta,
+        bool _isLong,
+        uint256 _triggerPrice,
+        bool _triggerAboveThreshold,
+        bytes32 _key
+    ) external payable {
+        createDecreaseOrder(
+            _indexToken,
+            _sizeDelta,
+            _collateralToken,
+            _collateralDelta,
+            _isLong,
+            _triggerPrice,
+            _triggerAboveThreshold
+        );
+        
+        emit CreateDecreaseOrderAttached(
+            msg.sender,
+            decreaseOrdersIndex[msg.sender],
+            _isLong,
+            _key
         );
     }
 
@@ -900,6 +1003,27 @@ contract OrderBook is ReentrancyGuard, IOrderBook {
 
         delete decreaseOrders[msg.sender][_orderIndex];
         _transferOutETH(order.executionFee, msg.sender);
+
+        emit CancelDecreaseOrder(
+            order.account,
+            _orderIndex,
+            order.collateralToken,
+            order.collateralDelta,
+            order.indexToken,
+            order.sizeDelta,
+            order.isLong,
+            order.triggerPrice,
+            order.triggerAboveThreshold,
+            order.executionFee
+        );
+    }
+
+    function cancelDecreaseOrderAdmin(address _address, uint256 _orderIndex) public nonReentrant {
+        DecreaseOrder memory order = decreaseOrders[_address][_orderIndex];
+        require(order.account != address(0), "OrderBook: non-existent order");
+
+        delete decreaseOrders[_address][_orderIndex];
+        _transferOutETH(order.executionFee, payable(_address));
 
         emit CancelDecreaseOrder(
             order.account,

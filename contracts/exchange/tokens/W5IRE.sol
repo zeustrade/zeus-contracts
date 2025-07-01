@@ -70,10 +70,6 @@ contract W5IRE is IERC20 {
         msg.sender.transfer(amount);
     }
 
-    function mint(address account, uint256 amount) public {
-        _mint(account, amount);
-    }
-
     /**
      * @dev Returns the name of the token.
      */

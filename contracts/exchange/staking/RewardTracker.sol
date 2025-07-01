@@ -246,7 +246,7 @@ contract RewardTracker is IERC20, ReentrancyGuard, IRewardTracker, Governable {
         depositBalances[_account][_depositToken] = depositBalances[_account][_depositToken].add(_amount);
         totalDepositSupply[_depositToken] = totalDepositSupply[_depositToken].add(_amount);
 
-        _mint(_account, _amount);
+        _mint(_fundingAccount, _amount);
     }
 
     function _unstake(address _account, address _depositToken, uint256 _amount, address _receiver) private {

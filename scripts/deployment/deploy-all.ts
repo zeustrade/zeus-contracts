@@ -23,8 +23,8 @@ import { FastPriceEvents } from "../../typechain-types/contracts/oracle/FastPric
 import { FastPriceFeed } from "../../typechain-types/contracts/oracle/FastPriceFeed";
 import { Reader } from "../../typechain-types/contracts/peripherals/Reader";
 import { USDG } from "../../typechain-types/contracts/tokens/USDG";
-import { GLP } from "../../typechain-types/contracts/gmx/GLP";
-import { GlpManager } from "../../typechain-types/contracts/core/GlpManager";
+import { ZLP } from "../../typechain-types/contracts/zus/ZLP";
+import { ZlpManager } from "../../typechain-types/contracts/core/ZlpManager";
 import { Timelock } from "../../typechain-types/contracts/peripherals/Timelock";
 
 import { TestToken } from "../../typechain-types/contracts/tokens/TestToken";
@@ -128,8 +128,8 @@ async function main() {
   // const VaultReaderFactory = await ethers.getContractFactory("VaultReader");
   // const ShortsTrackerFactory = await ethers.getContractFactory("ShortsTracker");
   // const USDGFactory = await ethers.getContractFactory("USDG");
-  // const GLPFactory = await ethers.getContractFactory("GLP");
-  // const GlpManagerFactory = await ethers.getContractFactory("GlpManager");
+  // const ZLPFactory = await ethers.getContractFactory("ZLP");
+  // const ZlpManagerFactory = await ethers.getContractFactory("ZlpManager");
   // const RouterFactory = await ethers.getContractFactory("Router");
   // const OrderBookFactory = await ethers.getContractFactory("OrderBook");
   // const ReferralStorageFactory = await ethers.getContractFactory("ReferralStorage");
@@ -145,8 +145,8 @@ async function main() {
   // const vaultReader = await VaultReaderFactory.attach("0x43ecAecfaFe728Fb5ebA261120DA8DA9Bf5378c6")
   // const shortsTracker = await ShortsTrackerFactory.attach("0xBB92dAFd4248da158cC549e5FB207612d92e89Ea")
   // const usdg = await USDGFactory.attach("0xecb52232A23A8C28C21eaC835742c7DE55AC3b99")
-  // const glp = await GLPFactory.attach("0x67B7a63A59d919b8AA29D32f3b10827Db8aA2307")
-  // const glpManager = await GlpManagerFactory.attach("0x8777D33F898977B3ea1Ff363c239b6D44cc05a34")
+  // const zlp = await ZLPFactory.attach("0x67B7a63A59d919b8AA29D32f3b10827Db8aA2307")
+  // const zlpManager = await ZlpManagerFactory.attach("0x8777D33F898977B3ea1Ff363c239b6D44cc05a34")
   // const router = await RouterFactory.attach("0xb3B2AC29eD54A5b8fEf3C7d71380814551565012")
   // const orderBook = await OrderBookFactory.attach("0x89f31C905De03410DAa0CF948eaDC280A8CE9817")
   // const referralStorage = await ReferralStorageFactory.attach("0x99B7ba293f87CFfbd6A3152E9ffc41Ded34e6479")
@@ -157,7 +157,8 @@ async function main() {
 
 
   const VaultFactory = await ethers.getContractFactory("Vault");
-  const vault = await VaultFactory.deploy() as Vault;
+  const vault = await upgrades.deployProxy(VaultFactory);
+  // const vault = await VaultFactory.deploy() as Vault;
   await vault.deployed();
   console.log("Vault deployed:", vault.address);
   // await tryVerify(vault, []);
@@ -201,41 +202,41 @@ async function main() {
   // await tryVerify(usdg, [vault.address]);
 
   // //
-  // // GLP
+  // // ZLP
   // //
 
-  const GLPFactory = await ethers.getContractFactory("GLP");
-  const glp = await GLPFactory.deploy() as GLP;
+  const ZLPFactory = await ethers.getContractFactory("ZLP");
+  const zlp = await ZLPFactory.deploy() as ZLP;
   
-  await glp.deployed();
-  console.log("GLP deployed:", glp.address);
-  // await tryVerify(glp, []);
+  await zlp.deployed();
+  console.log("ZLP deployed:", zlp.address);
+  // await tryVerify(zlp, []);
 
   // //
-  // // GlpManager
+  // // ZlpManager
   // //
 
-  const GlpManagerFactory = await ethers.getContractFactory("GlpManager");
-  const glpManager = await GlpManagerFactory.deploy(
+  const ZlpManagerFactory = await ethers.getContractFactory("ZlpManager");
+  const zlpManager = await ZlpManagerFactory.deploy(
     vault.address,
     usdg.address,
-    glp.address,
+    zlp.address,
     shortsTracker.address,
     0
-  ) as GlpManager;
+  ) as ZlpManager;
   
-  await glpManager.deployed();
-  console.log("GlpManager deployed:", glpManager.address);
-  // await tryVerify(glpManager, [
+  await zlpManager.deployed();
+  console.log("ZlpManager deployed:", zlpManager.address);
+  // await tryVerify(zlpManager, [
   //   vault.address,
   //   usdg.address,
-  //   glp.address,
+  //   zlp.address,
   //   shortsTracker.address,
   //   0
   // ]);
   
-  await glp.setMinter(glpManager.address, true);
-  await usdg.addVault(glpManager.address);
+  await zlp.setMinter(zlpManager.address, true);
+  await usdg.addVault(zlpManager.address);
 
   
   // //
@@ -392,8 +393,8 @@ async function main() {
     "86400",
     tokenManager.address, // TokenManager
     tokenManager.address, // TokenManager
-    glpManager.address, // GLPManager
-    glpManager.address, // RewardRouter
+    zlpManager.address, // ZLPManager
+    zlpManager.address, // RewardRouter
     "13250000000000000000000000",
     "10",
     "40",
@@ -405,8 +406,8 @@ async function main() {
   //   "86400",
   //   tokenManager.address, // TokenManager
   //   tokenManager.address, // TokenManager
-  //   glpManager.address, // GLPManager
-  //   glpManager.address, // RewardRouter
+  //   zlpManager.address, // ZLPManager
+  //   zlpManager.address, // RewardRouter
   //   "13250000000000000000000000",
   //   "10",
   //   "40",
@@ -521,7 +522,7 @@ async function main() {
     "100"
   );
 
-  await vault.setManager(glpManager.address, true);
+  await vault.setManager(zlpManager.address, true);
   
   // todo check fees
   await vault.setPriceFeed(vaultPriceFeed.address);
@@ -577,8 +578,8 @@ async function main() {
   console.log("FastPriceFeed deployed:", fastPriceFeed.address);
   console.log("Reader deployed:", reader.address);
   console.log("USDG deployed:", usdg.address);
-  console.log("GLP deployed:", glp.address);
-  console.log("GlpManager deployed:", glpManager.address);
+  console.log("ZLP deployed:", zlp.address);
+  console.log("ZlpManager deployed:", zlpManager.address);
   console.log("Timelock deployed:", timelock.address);
 
 
@@ -592,16 +593,16 @@ async function main() {
   await eth.mint(signer.address, "1000000000000000000000000000");
   await wbtc.mint(signer.address, "1000000000000000000000000000");
   await w5ire.mint(signer.address, "1000000000000000000000000000");
-  await wbtc.approve(glpManager.address, "1000000000000000000000000000");
-  await eth.approve(glpManager.address, "1000000000000000000000000000");
-  await w5ire.approve(glpManager.address, "1000000000000000000000000000");
+  await wbtc.approve(zlpManager.address, "1000000000000000000000000000");
+  await eth.approve(zlpManager.address, "1000000000000000000000000000");
+  await w5ire.approve(zlpManager.address, "1000000000000000000000000000");
   await wbtc.approve(router.address, "1000000000000000000000000000");
   await eth.approve(router.address, "1000000000000000000000000000");
   await w5ire.approve(router.address, "1000000000000000000000000000");
 
 
-  await usdt.approve(glpManager.address, "1000000000000000000000000000");
-  await usdc.approve(glpManager.address, "1000000000000000000000000000");
+  await usdt.approve(zlpManager.address, "1000000000000000000000000000");
+  await usdc.approve(zlpManager.address, "1000000000000000000000000000");
 
   // todo there problems
   // await fastPriceFeed.setPrices([
@@ -625,13 +626,94 @@ async function main() {
   console.log(await fastPriceFeed.getPrice(WBTC_TEST_ADDRESS, 0, true))
   console.log(await fastPriceFeed.getPrice(W5IRE_TEST_ADDRESS, 0, true))
 
-  await glpManager.addLiquidity(
+  await zlpManager.addLiquidity(
     USDC_TEST_ADDRESS,
     "10000000000000000000000",
     "100",
-    "1=5∫))<®úí„âñb’≤Ik÷≈' aæZπxı_ÈˆÉÕ¶|úÚŒ(¢
-Jõ•åi¶ıî`dXŒvÙG9c%˙ì¶ÙwQƒx¡¬·d¸ñ”¬0V0¯c›	∑åR⁄l\ 1˘ *'HÌπ≈ŸLˆœ¬åû4≤-4ù¢3gVY˝€t»_Ì¨iù’˚2<®-∑ÒÍMCíyy¸æh%lé_ë⁄xzhÍ+}üDëèúèœ1êùzWó6çÀtÂù1ÚMÉ À{…ÎΩ~õ†¶b:0––vã°Dïî4ÀƒIbD8„nFR®¢Ô‹qò±3+‘ÃÔÓd~˚¥…?¯é®°:Ïù˙[9˜™‰§ÿâ¬L®#[Ñ&à®œ∞˜±˙cêÇ◊âª~K]~´àKeﬁ£j¿”‡%å—W1†1Õ)˘Û&¯·87∆äPòJo¥ÄÀgÃXe wÖEÌEÔDY◊˙4G‡πË∏Ì»§÷DÂBr	Ug‘T¨êGöî«Ö:˛= |∞]˘”b+ì83‡µí/,°pòïW«Yõ…móÅˆP›z3¬öı•æfn∂¿ƒE5ú˜Wf"¢â°çÆS1·ò}ÜÂ∑°M8ÚC∑ Y]7´ËîΩ6Ä.π÷¯˛`ø„»[“Gã—]/ŒÄr·W"¸Ôõt÷Û˙»	[MsZ¶jl‰å◊;bV~>˚[â,RÇ‰ÕMÿ5πæSﬂÍ,N÷/aO"É€òW;÷<“D≈w†õÈˇ/≠$1jŸnR%+Ö”—v*fÁÕ‚Ãã∆!DÂN~ÍÇ&„¡RøÀ¡	<ªã£CÌ‰êå…ƒ¨xy™& ¶∏öxÓRã%πu_'…'Vï—‘¡–#Ü|ó&à!iæ∏È˙0]Ÿ 2´Ñ#Ïô´\SW˛«îì∏˙ 2æ¢L¯‡˙»πY.<MßﬁÈîÂâÉJ‚ª¯@•1‹xr≥5'2‰Ói’ﬂ z´Õ∆){Jﬁ˜s°¡˝‘gµ‚Úéƒ=€!orÙ;]<_l˝~éLtîÈ≤:ÑP≥ züƒﬂ§ƒÓmT Î0¶1VÎ õ~ñù∏ΩL<∂Âå«°$Ä«*πı⁄Ñ®v1àáä"‡ˇ\ı∫Ñ’ËÓÕ{ÊFtÔ}¥Æ$Pk7ÌΩ&Œ ó~⁄ç·«08À3}lÆ8kæa∑µOïCòÓÎ8Ö’)√°¥f¢∑»H∑±èBs+ƒ-Í„†˛jﬂmµá˚—<—E§=Íì¨∫Uù|nˇ√ç¨Èˇ≠Ã{¬ ∏˚ákh≠áÊÙjrø&:f§YØ∫j;Î≤)^ñ5|;ÎãÊMÓïF®TªI±√§Ÿ¢Y«ïΩ1äL]ˆâùÈ£Öàïà¢‘ÿ√*©zrÈÕù§§s∞pRV$Xˇ©;^¨$Sá©ÃË!Í#b:'OöN,\ä¥ŸMiò3g˚ù›”◊c¸;∆≤ß.·ı≥fù§4.¢Ω8ÿB ÈÃV&Yr∂99O?QXØyÚçùí(Íô$¥‹vL%]ÉB±MOKÂg1¡€€ï‚~qÉD~ú≠»HÔÕés gëﬂı/(ì¿ì“}»©t^4 (–Ã¡{€Û‹&˛∏F1'ˇæRC%úñ aîï«æR04Ï‚“·}:s|Î˝QNœåÌ”≠1ÆÁQ™|“Q¥J`dÁBﬁzwœ¢¥¸>uWU≠ÊÊG}–g¨ Ç_úóá¶Ån […´ÉøìU?„Êº\l-Oëj¯"¿sˇÚ¸çBˆ_5√Å:ò∏®cå±fù›õ,Ö4˛ÊbÙx@xÌ˜`u5.uT`“ıy1K?µ) Ÿu·R9F$Ÿ&?∞/…ëQÑj_Ÿo\"x	C∆Ê?&ä¢rX√bçía[æ¿œ†S”A%‡Ë2¥z=ÑÜªØAœ4Y˛ŒˇNkmÁ2"‚≠<|ô¿”áúXl\g÷L2 ΩÜÿW7ir„f†¢Í⁄ÆÖ\ÜCÒ≠¶˜›môÓB◊√î?ÑQ	íRYÎ˜IëO £cà0_æ¬Ë—'âFR¢ïJKDz êpˆÇ<;~"ÀÖÄ©—Ó3<åBM˜8vCo∂‰„Ëﬂ”æù˜(f≥qSß´B˜\6µ-ËÃJ†9áñÓYı2íTÃ\Z¨èJM$ˆ`9Nü:WøzC	ÀGqÜËW2ò%˜ªä`—kˇËÓ÷ZÅÿÚ`°-V3ëök©Ls4•&í’Ë«≥]°ë#∆…-?{ëîcP÷ÔW]Ÿìèﬂo+\≤,<bë;Q†˙¸$]’‡ÍÁÛ§èª(ﬁ7a8ˆD<ı∆ò˜ıM/Mıä]ÚÍî≠√Ô*˜`÷Øu€ƒ÷™p·±ù˘Bƒß√íªÓ8∆¯Ò˘»‚∂v}
-- úBµË≤µ|luiq◊#+≠∫UOsZ˝yØÇ^©#Z∑s758–+‡ß∑lY.{W)má@jw2Q)ıZÈÄ"∂çÜÜ¯Ä˚≠ø”Ïd`πŸÏ A"|qﬂÉ◊4ÑÈª±‹•Æƒaƒ*ë‰Ÿ‚¸åG'9?≈E3™∏PYåZÿˆˇæ3·ù	#–__ÈŸ∞6‡qLÍÍNIÇ¡“Íﬂ™P¡æ¿;.¡◊>‹ìaqØk±O∞‚ºÌ˙.ê7UÙ≠x◊!LöÎ≥ØπP≥˝Œ¡ù∑±˙ó»»è¡ô˚Jfˆ3î°r*§Éì_ÌÀ`*Ï∆NÓ¢éèyµ–»ÆÂf#èxÑ„e§∂UT’∞¬mwUûˇ}m'6¶#ñV2ïêïﬂØ`¬˝
-⁄`ñd1æ>:˛&B≈(÷‹LjCÇﬂƒŒä}Œ‘z$»ÎÀBÏ‚¯«Ô…ÁCQ†ﬁr1∂Ô‡+^äsX∫Ó6Ö_Ù ∆ƒB¡*I˚îÀBYw∆ƒ§f”F%f%	÷v√p‡ÿ}æÉ`â	§è˙…Î–ÿR˘VÚÂ| ¡Ω?
-VÓeB°$Ü° €dÒUùiŸS#ÆÖàbıŸö∏P⁄=
--£´qRoeÜµ›L$öF„‚àøÕ∏w]+T˛/≥£€ÒèÄ˜yΩ9póê≤ñh@u51jﬁﬂ%…[L≠Í≥&ckBdh|Ã0J™˝Í§HYøDX’
+    "1"
+  );
+  await zlpManager.addLiquidity(
+    USDT_TEST_ADDRESS,
+    "10000000000000000000000",
+    "100",
+    "1"
+  );
+  await w5ire.mint(signer.address, "1000000000000000000");
+
+  await zlpManager.addLiquidity(
+    wbtc.address,
+    "1000000000",
+    "100",
+    "1"
+  );
+  await zlpManager.addLiquidity(
+    eth.address,
+    "100000000000000000000",
+    "100",
+    "1"
+  );
+  await zlpManager.addLiquidity(
+    w5ire.address,
+    "100000000000000000000",
+    "100",
+    "1"
+  );
+  
+  await vault.setBufferAmount(USDC_TEST_ADDRESS, "5000000000000000000000");
+  await vault.setBufferAmount(USDT_TEST_ADDRESS, "5000000000000000000000");
+  await vault.setBufferAmount(WBTC_TEST_ADDRESS, "500000000");
+  await vault.setBufferAmount(ETH_ADDRESS, "50000000000000000000");
+  await vault.setBufferAmount(W5IRE_TEST_ADDRESS, "50000000000000000000");
+
+  console.log(await zlp.balanceOf(signer.address));
+
+  await router.swap([ETH_ADDRESS, WBTC_TEST_ADDRESS],"1000000000000000","1",signer.address);
+
+  await router.addPlugin(positionRouter.address);
+  await router.approvePlugin(positionRouter.address);
+
+  await referralStorage.setTier("0", "0", "3000");
+  await referralStorage.setTier("1", "0", "4000");
+  await referralStorage.setReferrerTier(REFERRAL_WALLET, "1")
+  await referralStorage.setHandler(positionManager.address, true);
+  await referralStorage.setHandler(positionRouter.address, true);
+
+  await vault.setGov(timelock.address);
+  
+  // console.log(await positionRouter.createIncreasePosition(
+  //   [w5ire.address],
+  //   w5ire.address,
+  //   "100000000",
+  //   "0",
+  //   "63534864075539424529162320000000000",
+  //   true,
+  //   "28153906664500000000000000000000000",
+  //   "215000000000000",
+  //   "0x0000000000000000000000000000000000000000000000000000000000000000",
+  //   "0x0000000000000000000000000000000000000000",
+  //   {value: "215000000000000"}
+  // ));
+
+
+
+  // await fastPriceFeed.setPricesWithBitsAndExecute("346306298459958042013869219159652", "1693705506",100,100,100,100);   
+
+  // await positionRouter.createIncreasePosition(
+  //   ["0xca1736Ff8CDD85f5688d4D6f386e9518C2944572"]
+  // )
+
+  // add tier for referralStorage
+
+  // // add reservedParam for Vault
+
+  //   // setBufferAmount
+
+
+}
+
+main()
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
