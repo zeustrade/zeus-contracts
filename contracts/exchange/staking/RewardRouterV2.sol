@@ -105,8 +105,11 @@ contract RewardRouterV2 is IRewardRouterV2, ReentrancyGuard, Governable {
 
     function mintAndStakeZlp(address _token, uint256 _amount, uint256 _minUsdg, uint256 _minZlp) external nonReentrant returns (uint256) {
         require(_amount > 0, "RewardRouter: invalid _amount");
-
         address account = msg.sender;
+
+        IERC20(_token).transferFrom(account, address(this), _amount);
+        IERC20(_token).approve(zlpManager, _amount);
+
         uint256 zlpAmount = IZlpManager(zlpManager).addLiquidityForAccount(account, account, _token, _amount, _minUsdg, _minZlp);
         IERC20(zlp).approve(feeZlpTracker, zlpAmount);
         IRewardTracker(feeZlpTracker).stakeForAccount(address(this), account, zlp, zlpAmount);
