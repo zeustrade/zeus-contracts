@@ -2,15 +2,15 @@
 
 pragma solidity 0.6.12;
 
-import "../libraries/math/SafeMath.sol";
-import "../libraries/token/IERC20.sol";
+import '../libraries/math/SafeMath.sol';
+import '../libraries/token/IERC20.sol';
 
-import "../core/interfaces/IZlpManager.sol";
+import '../core/interfaces/IZlpManager.sol';
 
-import "./interfaces/IRewardTracker.sol";
-import "./interfaces/IRewardTracker.sol";
+import './interfaces/IRewardTracker.sol';
+import './interfaces/IRewardTracker.sol';
 
-import "../access/Governable.sol";
+import '../access/Governable.sol';
 
 // provide a way to migrate staked ZLP tokens by unstaking from the sender
 // and staking for the receiver
@@ -25,12 +25,7 @@ contract StakedZlpMigrator is Governable {
     address public feeZlpTracker;
     bool public isEnabled = true;
 
-    constructor(
-        address _sender,
-        address _zlp,
-        address _stakedZlpTracker,
-        address _feeZlpTracker
-    ) public {
+    constructor(address _sender, address _zlp, address _stakedZlpTracker, address _feeZlpTracker) public {
         sender = _sender;
         zlp = _zlp;
         stakedZlpTracker = _stakedZlpTracker;
@@ -46,14 +41,19 @@ contract StakedZlpMigrator is Governable {
     }
 
     function _transfer(address _sender, address _recipient, uint256 _amount) private {
-        require(isEnabled, "StakedZlpMigrator: not enabled");
-        require(_sender != address(0), "StakedZlpMigrator: transfer from the zero address");
-        require(_recipient != address(0), "StakedZlpMigrator: transfer to the zero address");
+        require(isEnabled, 'StakedZlpMigrator: not enabled');
+        require(_sender != address(0), 'StakedZlpMigrator: transfer from the zero address');
+        require(_recipient != address(0), 'StakedZlpMigrator: transfer to the zero address');
 
-        IRewardTracker(stakedZlpTracker).unstakeForAccount(_sender, feeZlpTracker, _amount, _sender);
-        IRewardTracker(feeZlpTracker).unstakeForAccount(_sender, zlp, _amount, _sender);
+        // Unstake to this contract then restake for recipient, mirroring new logic
+        IRewardTracker(stakedZlpTracker).unstakeForAccount(_sender, feeZlpTracker, _amount, address(this));
+        IERC20(feeZlpTracker).transfer(_sender, _amount);
+        IRewardTracker(feeZlpTracker).unstakeForAccount(_sender, zlp, _amount, address(this));
 
-        IRewardTracker(feeZlpTracker).stakeForAccount(_sender, _recipient, zlp, _amount);
-        IRewardTracker(stakedZlpTracker).stakeForAccount(_recipient, _recipient, feeZlpTracker, _amount);
+        IERC20(zlp).approve(feeZlpTracker, _amount);
+        IRewardTracker(feeZlpTracker).stakeForAccount(address(this), _recipient, zlp, _amount);
+        IERC20(feeZlpTracker).approve(stakedZlpTracker, _amount);
+        IRewardTracker(stakedZlpTracker).stakeForAccount(address(this), _recipient, feeZlpTracker, _amount);
+        IERC20(stakedZlpTracker).transfer(_recipient, _amount);
     }
 }
