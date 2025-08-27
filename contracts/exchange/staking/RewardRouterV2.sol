@@ -2,19 +2,19 @@
 
 pragma solidity 0.6.12;
 
-import '../libraries/math/SafeMath.sol';
-import '../libraries/token/IERC20.sol';
-import '../libraries/token/SafeERC20.sol';
-import '../libraries/utils/ReentrancyGuard.sol';
-import '../libraries/utils/Address.sol';
+import "../libraries/math/SafeMath.sol";
+import "../libraries/token/IERC20.sol";
+import "../libraries/token/SafeERC20.sol";
+import "../libraries/utils/ReentrancyGuard.sol";
+import "../libraries/utils/Address.sol";
 
-import './interfaces/IRewardTracker.sol';
-import './interfaces/IRewardRouterV2.sol';
-import './interfaces/IVester.sol';
-import '../tokens/interfaces/IMintable.sol';
-import '../tokens/interfaces/IWETH.sol';
-import '../core/interfaces/IZlpManager.sol';
-import '../access/Governable.sol';
+import "./interfaces/IRewardTracker.sol";
+import "./interfaces/IRewardRouterV2.sol";
+import "./interfaces/IVester.sol";
+import "../tokens/interfaces/IMintable.sol";
+import "../tokens/interfaces/IWETH.sol";
+import "../core/interfaces/IZlpManager.sol";
+import "../access/Governable.sol";
 
 contract RewardRouterV2 is IRewardRouterV2, ReentrancyGuard, Governable {
     using SafeMath for uint256;
@@ -46,7 +46,7 @@ contract RewardRouterV2 is IRewardRouterV2, ReentrancyGuard, Governable {
     event UnstakeZlp(address account, uint256 amount);
 
     receive() external payable {
-        require(msg.sender == weth, 'Router: invalid sender');
+        require(msg.sender == weth, "Router: invalid sender");
     }
 
     function initialize(
@@ -61,7 +61,7 @@ contract RewardRouterV2 is IRewardRouterV2, ReentrancyGuard, Governable {
         address _stakedZlpTracker,
         address _zlpManager
     ) external onlyGov {
-        require(!isInitialized, 'RewardRouter: already initialized');
+        require(!isInitialized, "RewardRouter: already initialized");
         isInitialized = true;
 
         weth = _weth;
@@ -84,10 +84,11 @@ contract RewardRouterV2 is IRewardRouterV2, ReentrancyGuard, Governable {
         IERC20(_token).safeTransfer(_account, _amount);
     }
 
-    function batchStakeZusForAccount(
-        address[] memory _accounts,
-        uint256[] memory _amounts
-    ) external nonReentrant onlyGov {
+    function batchStakeZusForAccount(address[] memory _accounts, uint256[] memory _amounts)
+        external
+        nonReentrant
+        onlyGov
+    {
         address _zus = zus;
         for (uint256 i = 0; i < _accounts.length; i++) {
             _stakeZus(msg.sender, _accounts[i], _zus, _amounts[i]);
@@ -106,13 +107,12 @@ contract RewardRouterV2 is IRewardRouterV2, ReentrancyGuard, Governable {
         _unstakeZus(msg.sender, zus, _amount);
     }
 
-    function mintAndStakeZlp(
-        address _token,
-        uint256 _amount,
-        uint256 _minUsdg,
-        uint256 _minZlp
-    ) external nonReentrant returns (uint256) {
-        require(_amount > 0, 'RewardRouter: invalid _amount');
+    function mintAndStakeZlp(address _token, uint256 _amount, uint256 _minUsdg, uint256 _minZlp)
+        external
+        nonReentrant
+        returns (uint256)
+    {
+        require(_amount > 0, "RewardRouter: invalid _amount");
         address account = msg.sender;
 
         IERC20(_token).transferFrom(account, address(this), _amount);
@@ -121,12 +121,7 @@ contract RewardRouterV2 is IRewardRouterV2, ReentrancyGuard, Governable {
         // transfer tokens to this contract then add liquidity on behalf of this contract
         // to avoid double-transfer from user
         uint256 zlpAmount = IZlpManager(zlpManager).addLiquidityForAccount(
-            address(this),
-            address(this),
-            _token,
-            _amount,
-            _minUsdg,
-            _minZlp
+            address(this), address(this), _token, _amount, _minUsdg, _minZlp
         );
         IERC20(zlp).approve(feeZlpTracker, zlpAmount);
         IRewardTracker(feeZlpTracker).stakeForAccount(address(this), account, zlp, zlpAmount);
@@ -141,19 +136,14 @@ contract RewardRouterV2 is IRewardRouterV2, ReentrancyGuard, Governable {
     }
 
     function mintAndStakeZlpETH(uint256 _minUsdg, uint256 _minZlp) external payable nonReentrant returns (uint256) {
-        require(msg.value > 0, 'RewardRouter: invalid msg.value');
+        require(msg.value > 0, "RewardRouter: invalid msg.value");
 
         IWETH(weth).deposit{value: msg.value}();
         IERC20(weth).approve(zlpManager, msg.value);
 
         address account = msg.sender;
         uint256 zlpAmount = IZlpManager(zlpManager).addLiquidityForAccount(
-            address(this),
-            address(this),
-            weth,
-            msg.value,
-            _minUsdg,
-            _minZlp
+            address(this), address(this), weth, msg.value, _minUsdg, _minZlp
         );
 
         IERC20(zlp).approve(feeZlpTracker, zlpAmount);
@@ -168,47 +158,36 @@ contract RewardRouterV2 is IRewardRouterV2, ReentrancyGuard, Governable {
         return zlpAmount;
     }
 
-    function unstakeAndRedeemZlp(
-        address _tokenOut,
-        uint256 _zlpAmount,
-        uint256 _minOut,
-        address _receiver
-    ) external nonReentrant returns (uint256) {
-        require(_zlpAmount > 0, 'RewardRouter: invalid _zlpAmount');
+    function unstakeAndRedeemZlp(address _tokenOut, uint256 _zlpAmount, uint256 _minOut, address _receiver)
+        external
+        nonReentrant
+        returns (uint256)
+    {
+        require(_zlpAmount > 0, "RewardRouter: invalid _zlpAmount");
 
         address account = msg.sender;
         IRewardTracker(stakedZlpTracker).unstakeForAccount(account, feeZlpTracker, _zlpAmount, account);
         IRewardTracker(feeZlpTracker).unstakeForAccount(account, zlp, _zlpAmount, account);
-        uint256 amountOut = IZlpManager(zlpManager).removeLiquidityForAccount(
-            account,
-            _tokenOut,
-            _zlpAmount,
-            _minOut,
-            _receiver
-        );
+        uint256 amountOut =
+            IZlpManager(zlpManager).removeLiquidityForAccount(account, _tokenOut, _zlpAmount, _minOut, _receiver);
 
         emit UnstakeZlp(account, _zlpAmount);
 
         return amountOut;
     }
 
-    function unstakeAndRedeemZlpETH(
-        uint256 _zlpAmount,
-        uint256 _minOut,
-        address payable _receiver
-    ) external nonReentrant returns (uint256) {
-        require(_zlpAmount > 0, 'RewardRouter: invalid _zlpAmount');
+    function unstakeAndRedeemZlpETH(uint256 _zlpAmount, uint256 _minOut, address payable _receiver)
+        external
+        nonReentrant
+        returns (uint256)
+    {
+        require(_zlpAmount > 0, "RewardRouter: invalid _zlpAmount");
 
         address account = msg.sender;
         IRewardTracker(stakedZlpTracker).unstakeForAccount(account, feeZlpTracker, _zlpAmount, account);
         IRewardTracker(feeZlpTracker).unstakeForAccount(account, zlp, _zlpAmount, account);
-        uint256 amountOut = IZlpManager(zlpManager).removeLiquidityForAccount(
-            account,
-            weth,
-            _zlpAmount,
-            _minOut,
-            address(this)
-        );
+        uint256 amountOut =
+            IZlpManager(zlpManager).removeLiquidityForAccount(account, weth, _zlpAmount, _minOut, address(this));
 
         IWETH(weth).withdraw(amountOut);
 
@@ -290,7 +269,7 @@ contract RewardRouterV2 is IRewardRouterV2, ReentrancyGuard, Governable {
 
     function acceptTransfer(address _sender) external nonReentrant {
         address receiver = msg.sender;
-        require(pendingReceivers[_sender] == receiver, 'RewardRouter: transfer not signalled');
+        require(pendingReceivers[_sender] == receiver, "RewardRouter: transfer not signalled");
         delete pendingReceivers[_sender];
 
         _validateReceiver(receiver);
@@ -329,11 +308,11 @@ contract RewardRouterV2 is IRewardRouterV2, ReentrancyGuard, Governable {
     function _validateReceiver(address _receiver) private view {
         require(
             IRewardTracker(stakedZusTracker).averageStakedAmounts(_receiver) == 0,
-            'RewardRouter: stakedZusTracker.averageStakedAmounts > 0'
+            "RewardRouter: stakedZusTracker.averageStakedAmounts > 0"
         );
         require(
             IRewardTracker(stakedZusTracker).cumulativeRewards(_receiver) == 0,
-            'RewardRouter: stakedZusTracker.cumulativeRewards > 0'
+            "RewardRouter: stakedZusTracker.cumulativeRewards > 0"
         );
 
         // require(IRewardTracker(bonusZusTracker).averageStakedAmounts(_receiver) == 0, "RewardRouter: bonusZusTracker.averageStakedAmounts > 0");
@@ -344,20 +323,20 @@ contract RewardRouterV2 is IRewardRouterV2, ReentrancyGuard, Governable {
 
         require(
             IRewardTracker(stakedZlpTracker).averageStakedAmounts(_receiver) == 0,
-            'RewardRouter: stakedZlpTracker.averageStakedAmounts > 0'
+            "RewardRouter: stakedZlpTracker.averageStakedAmounts > 0"
         );
         require(
             IRewardTracker(stakedZlpTracker).cumulativeRewards(_receiver) == 0,
-            'RewardRouter: stakedZlpTracker.cumulativeRewards > 0'
+            "RewardRouter: stakedZlpTracker.cumulativeRewards > 0"
         );
 
         require(
             IRewardTracker(feeZlpTracker).averageStakedAmounts(_receiver) == 0,
-            'RewardRouter: feeZlpTracker.averageStakedAmounts > 0'
+            "RewardRouter: feeZlpTracker.averageStakedAmounts > 0"
         );
         require(
             IRewardTracker(feeZlpTracker).cumulativeRewards(_receiver) == 0,
-            'RewardRouter: feeZlpTracker.cumulativeRewards > 0'
+            "RewardRouter: feeZlpTracker.cumulativeRewards > 0"
         );
     }
 
@@ -373,7 +352,7 @@ contract RewardRouterV2 is IRewardRouterV2, ReentrancyGuard, Governable {
     // }
 
     function _stakeZus(address _fundingAccount, address _account, address _token, uint256 _amount) private {
-        require(_amount > 0, 'RewardRouter: invalid _amount');
+        require(_amount > 0, "RewardRouter: invalid _amount");
 
         IRewardTracker(stakedZusTracker).stakeForAccount(_fundingAccount, _account, _token, _amount);
         // IRewardTracker(bonusZusTracker).stakeForAccount(_account, _account, stakedZusTracker, _amount);
@@ -383,7 +362,7 @@ contract RewardRouterV2 is IRewardRouterV2, ReentrancyGuard, Governable {
     }
 
     function _unstakeZus(address _account, address _token, uint256 _amount) private {
-        require(_amount > 0, 'RewardRouter: invalid _amount');
+        require(_amount > 0, "RewardRouter: invalid _amount");
 
         // uint256 balance = IRewardTracker(stakedZusTracker).stakedAmounts(_account);
 

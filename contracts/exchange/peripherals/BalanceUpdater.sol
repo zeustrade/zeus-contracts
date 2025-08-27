@@ -9,12 +9,7 @@ import "../core/interfaces/IVault.sol";
 contract BalanceUpdater {
     using SafeMath for uint256;
 
-    function updateBalance(
-        address _vault,
-        address _token,
-        address _usdg,
-        uint256 _usdgAmount
-    ) public {
+    function updateBalance(address _vault, address _token, address _usdg, uint256 _usdgAmount) public {
         IVault vault = IVault(_vault);
         IERC20 token = IERC20(_token);
         uint256 poolAmount = vault.poolAmounts(_token);

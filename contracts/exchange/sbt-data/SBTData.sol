@@ -13,7 +13,7 @@ contract SBTData is Initializable, AccessControlUpgradeable, ISBTData {
 
     mapping(uint256 => Data) internal _data;
 
-    function initialize(IERC721 _sbt, address admin) initializer public {
+    function initialize(IERC721 _sbt, address admin) public initializer {
         sbt = _sbt;
         __AccessControl_init();
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
@@ -27,7 +27,7 @@ contract SBTData is Initializable, AccessControlUpgradeable, ISBTData {
 
     function incrementTrades(uint256 tokenId) external onlyRole(DATA_UPDATER_ROLE) {
         _data[tokenId].trades++;
-    } 
+    }
 
     function getTrades(uint256 tokenId) external view returns (uint256) {
         return _data[tokenId].trades;
@@ -37,7 +37,7 @@ contract SBTData is Initializable, AccessControlUpgradeable, ISBTData {
 
     function incrementReferrals(uint256 tokenId) external onlyRole(DATA_UPDATER_ROLE) {
         _data[tokenId].referrals++;
-    } 
+    }
 
     function getReferrals(uint256 tokenId) external view returns (uint256) {
         return _data[tokenId].referrals;
@@ -47,7 +47,7 @@ contract SBTData is Initializable, AccessControlUpgradeable, ISBTData {
 
     function incrementSwaps(uint256 tokenId) external onlyRole(DATA_UPDATER_ROLE) {
         _data[tokenId].swaps++;
-    } 
+    }
 
     function getSwaps(uint256 tokenId) external view returns (uint256) {
         return _data[tokenId].swaps;
@@ -57,7 +57,7 @@ contract SBTData is Initializable, AccessControlUpgradeable, ISBTData {
 
     function increaseTradingVolume(uint256 tokenId, uint256 value) external onlyRole(DATA_UPDATER_ROLE) {
         _data[tokenId].tradingVolume += value;
-    } 
+    }
 
     function getTradingVolume(uint256 tokenId) external view returns (uint256) {
         return _data[tokenId].tradingVolume;
@@ -67,7 +67,7 @@ contract SBTData is Initializable, AccessControlUpgradeable, ISBTData {
 
     function incrementOrders(uint256 tokenId) external onlyRole(DATA_UPDATER_ROLE) {
         _data[tokenId].orders++;
-    } 
+    }
 
     function getOrders(uint256 tokenId) external view returns (uint256) {
         return _data[tokenId].orders;
@@ -81,10 +81,9 @@ contract SBTData is Initializable, AccessControlUpgradeable, ISBTData {
 
     function decreasePnl(uint256 tokenId, int256 value) external onlyRole(DATA_UPDATER_ROLE) {
         _data[tokenId].pnl -= value;
-    } 
+    }
 
     function getPnl(uint256 tokenId) external view returns (int256) {
         return _data[tokenId].pnl;
     }
 }
-

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.6.12;
 
-import './helpers/TestBase.sol';
-import {DeployAll} from './helpers/DeployAll.sol';
-import {StakeManager} from '../contracts/exchange/staking/StakeManager.sol';
+import "./helpers/TestBase.sol";
+import {DeployAll} from "./helpers/DeployAll.sol";
+import {StakeManager} from "../contracts/exchange/staking/StakeManager.sol";
 
 contract StakeManagerTest is DeployAll {
     StakeManager public stakeManager;
@@ -12,7 +12,7 @@ contract StakeManagerTest is DeployAll {
     function setUp() public override {
         DeployAll.setUp();
         stakeManager = new StakeManager();
-        alice = address(uint160(uint256(keccak256(abi.encodePacked('Alice')))));
+        alice = address(uint160(uint256(keccak256(abi.encodePacked("Alice")))));
 
         vm.prank(stakeManager.gov());
         stakeManager.setGov(admin);
@@ -30,7 +30,7 @@ contract StakeManagerTest is DeployAll {
         zus.approve(address(stakedZusTracker), uint256(-1));
 
         vm.prank(user);
-        vm.expectRevert(bytes('Governable: forbidden'));
+        vm.expectRevert(bytes("Governable: forbidden"));
         stakeManager.stakeForAccount(address(stakedZusTracker), alice, address(zus), amount);
     }
 

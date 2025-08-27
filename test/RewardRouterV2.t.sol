@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.6.12;
 
-import './helpers/TestBase.sol';
-import {SafeMath} from '../contracts/exchange/libraries/math/SafeMath.sol';
+import "./helpers/TestBase.sol";
+import {SafeMath} from "../contracts/exchange/libraries/math/SafeMath.sol";
 
-import {DeployAll} from './helpers/DeployAll.sol';
-import {IRewardTracker} from '../contracts/exchange/staking/interfaces/IRewardTracker.sol';
+import {DeployAll} from "./helpers/DeployAll.sol";
+import {IRewardTracker} from "../contracts/exchange/staking/interfaces/IRewardTracker.sol";
 
 contract RewardRouterV2Test is DeployAll {
     function testInitializeParameters() public {
@@ -20,7 +20,7 @@ contract RewardRouterV2Test is DeployAll {
 
     function testInitializeRevertsWhenCalledTwice() public {
         vm.startPrank(admin);
-        vm.expectRevert(bytes('RewardRouter: already initialized'));
+        vm.expectRevert(bytes("RewardRouter: already initialized"));
         rewardRouter.initialize(
             address(weth),
             address(zus),
@@ -95,7 +95,7 @@ contract RewardRouterV2Test is DeployAll {
         assertGt(minted, 0);
         vm.stopPrank();
 
-        address receiver = address(uint160(uint256(keccak256(abi.encodePacked('Receiver')))));
+        address receiver = address(uint160(uint256(keccak256(abi.encodePacked("Receiver")))));
 
         vm.prank(user);
         rewardRouter.signalTransfer(receiver);
@@ -186,15 +186,19 @@ interface TokenLike {
     function transfer(address to, uint256 amount) external returns (bool);
     function balanceOf(address) external view returns (uint256);
 }
+
 contract Token is TokenLike {
     using SafeMath for uint256;
-    string public name = 'T';
-    string public symbol = 'T';
+
+    string public name = "T";
+    string public symbol = "T";
     uint8 public decimals = 18;
     mapping(address => uint256) public override balanceOf;
+
     function mint(address to, uint256 amt) external override {
         balanceOf[to] = balanceOf[to].add(amt);
     }
+
     function transfer(address to, uint256 amt) external override returns (bool) {
         balanceOf[msg.sender] = balanceOf[msg.sender].sub(amt);
         balanceOf[to] = balanceOf[to].add(amt);

@@ -1,4 +1,3 @@
-
 // SPDX-License-Identifier: MIT
 
 pragma solidity ^0.6.0;
@@ -15,7 +14,7 @@ contract MaliciousTraderTest {
     receive() external payable {
         // just consume lot of gas
         uint256 a;
-        for (uint i = 0; i < 1000000; i++) {
+        for (uint256 i = 0; i < 1000000; i++) {
             a = a * i;
         }
         emit Received();

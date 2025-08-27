@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.6.12;
 
-import './helpers/TestBase.sol';
-import {DeployAll} from './helpers/DeployAll.sol';
-import {IZlpManager} from '../contracts/exchange/core/interfaces/IZlpManager.sol';
-import {IERC20} from '../contracts/exchange/libraries/token/IERC20.sol';
-import {ZlpBalance} from '../contracts/exchange/staking/ZusBalance.sol';
+import "./helpers/TestBase.sol";
+import {DeployAll} from "./helpers/DeployAll.sol";
+import {IZlpManager} from "../contracts/exchange/core/interfaces/IZlpManager.sol";
+import {IERC20} from "../contracts/exchange/libraries/token/IERC20.sol";
+import {ZlpBalance} from "../contracts/exchange/staking/ZusBalance.sol";
 
 contract ZlpBalanceTest is DeployAll {
     ZlpBalance public zlpBalance;
@@ -13,7 +13,7 @@ contract ZlpBalanceTest is DeployAll {
 
     function setUp() public override {
         DeployAll.setUp();
-        receiver = address(uint160(uint256(keccak256(abi.encodePacked('Receiver')))));
+        receiver = address(uint160(uint256(keccak256(abi.encodePacked("Receiver")))));
         zlpBalance = new ZlpBalance(IZlpManager(address(zlpManager)), address(stakedZlpTracker));
     }
 

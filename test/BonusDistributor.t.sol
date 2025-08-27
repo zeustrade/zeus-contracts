@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.6.12;
 
-import './helpers/TestBase.sol';
-import {DeployAll} from './helpers/DeployAll.sol';
-import {BonusDistributor} from '../contracts/exchange/staking/BonusDistributor.sol';
-import {IERC20} from '../contracts/exchange/libraries/token/IERC20.sol';
+import "./helpers/TestBase.sol";
+import {DeployAll} from "./helpers/DeployAll.sol";
+import {BonusDistributor} from "../contracts/exchange/staking/BonusDistributor.sol";
+import {IERC20} from "../contracts/exchange/libraries/token/IERC20.sol";
 
 contract BonusDistributorTest is DeployAll {
     BonusDistributor public bonus;
@@ -25,9 +25,6 @@ contract BonusDistributorTest is DeployAll {
         bonus.updateLastDistributionTime();
         vm.prank(admin);
         bonus.setBonusMultiplier(1000);
-        assertEq(
-            bonus.tokensPerInterval(),
-            (IERC20(address(stakedZusTracker)).totalSupply() * 1000) / 10000 / 365 days
-        );
+        assertEq(bonus.tokensPerInterval(), (IERC20(address(stakedZusTracker)).totalSupply() * 1000) / 10000 / 365 days);
     }
 }

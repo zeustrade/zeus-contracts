@@ -12,14 +12,11 @@ contract ZlpBalance {
     IZlpManager public zlpManager;
     address public stakedZlpTracker;
 
-    mapping (address => mapping (address => uint256)) public allowances;
+    mapping(address => mapping(address => uint256)) public allowances;
 
     event Approval(address indexed owner, address indexed spender, uint256 value);
 
-    constructor(
-        IZlpManager _zlpManager,
-        address _stakedZlpTracker
-    ) public {
+    constructor(IZlpManager _zlpManager, address _stakedZlpTracker) public {
         zlpManager = _zlpManager;
         stakedZlpTracker = _stakedZlpTracker;
     }
@@ -39,7 +36,8 @@ contract ZlpBalance {
     }
 
     function transferFrom(address _sender, address _recipient, uint256 _amount) external returns (bool) {
-        uint256 nextAllowance = allowances[_sender][msg.sender].sub(_amount, "ZlpBalance: transfer amount exceeds allowance");
+        uint256 nextAllowance =
+            allowances[_sender][msg.sender].sub(_amount, "ZlpBalance: transfer amount exceeds allowance");
         _approve(_sender, msg.sender, nextAllowance);
         _transfer(_sender, _recipient, _amount);
         return true;

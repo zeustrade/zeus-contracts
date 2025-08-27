@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.6.12;
 
-import './helpers/TestBase.sol';
-import {DeployAll} from './helpers/DeployAll.sol';
-import {IShortsTracker} from '../contracts/exchange/core/interfaces/IShortsTracker.sol';
-import {USDG} from '../contracts/exchange/tokens/USDG.sol';
+import "./helpers/TestBase.sol";
+import {DeployAll} from "./helpers/DeployAll.sol";
+import {IShortsTracker} from "../contracts/exchange/core/interfaces/IShortsTracker.sol";
+import {USDG} from "../contracts/exchange/tokens/USDG.sol";
 
 contract ZlpManagerTest is DeployAll {
     function testConstructor() public {
@@ -47,7 +47,7 @@ contract ZlpManagerTest is DeployAll {
         assertGt(vault.poolAmounts(address(collateralToken)), 0);
         assertGt(USDG(usdg).totalSupply(), 0);
 
-        vm.expectRevert(bytes('ZlpManager: cooldown duration not yet passed'));
+        vm.expectRevert(bytes("ZlpManager: cooldown duration not yet passed"));
         zlpManager.removeLiquidity(address(collateralToken), minted / 2, 0, user);
 
         vm.warp(block.timestamp + COOLDOWN_DURATION + 1);
@@ -62,7 +62,7 @@ contract ZlpManagerTest is DeployAll {
         uint256 depositAmount = 1e18;
         vm.startPrank(user);
         collateralToken.approve(address(zlpManager), uint256(-1));
-        vm.expectRevert(bytes('ZlpManager: insufficient USDG output'));
+        vm.expectRevert(bytes("ZlpManager: insufficient USDG output"));
         zlpManager.addLiquidity(address(collateralToken), depositAmount, uint256(-1), 0);
         vm.stopPrank();
     }
@@ -72,7 +72,7 @@ contract ZlpManagerTest is DeployAll {
 
         vm.startPrank(user);
         collateralToken.approve(address(zlpManager), uint256(-1));
-        vm.expectRevert(bytes('ZlpManager: forbidden'));
+        vm.expectRevert(bytes("ZlpManager: forbidden"));
         zlpManager.addLiquidityForAccount(user, user, address(collateralToken), depositAmount, 0, 0);
         vm.stopPrank();
 
@@ -89,7 +89,7 @@ contract ZlpManagerTest is DeployAll {
 
     function testSetCooldownDuration() public {
         vm.startPrank(user);
-        vm.expectRevert(bytes('Governable: forbidden'));
+        vm.expectRevert(bytes("Governable: forbidden"));
         zlpManager.setCooldownDuration(10 minutes);
         vm.stopPrank();
 
@@ -103,7 +103,7 @@ contract ZlpManagerTest is DeployAll {
         vm.startPrank(admin);
         zlpManager.setShortsTrackerAveragePriceWeight(100);
         assertEq(zlpManager.shortsTrackerAveragePriceWeight(), 100);
-        vm.expectRevert(bytes('ZlpManager: invalid weight'));
+        vm.expectRevert(bytes("ZlpManager: invalid weight"));
         zlpManager.setShortsTrackerAveragePriceWeight(100001);
         vm.stopPrank();
     }

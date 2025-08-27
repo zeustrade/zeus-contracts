@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
  * @notice MultiCall is used to combine several transactions in one for transaction creator.
  * To use it, generate binary transaction data before sending MultiCall transaction.
  * Be careful, `msg.sender` in this case will be set in MultiCall contract address,
- * but `tx.origin` is still address of transaction creator. 
+ * but `tx.origin` is still address of transaction creator.
  */
 contract MultiCall is AccessControl {
     bytes32 public constant BROADCASTER = keccak256("BROADCASTER");
@@ -32,7 +32,7 @@ contract MultiCall is AccessControl {
 
     constructor(address broadcaster) {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _grantRole(BROADCASTER, broadcaster);        
+        _grantRole(BROADCASTER, broadcaster);
     }
 
     /**
@@ -44,9 +44,7 @@ contract MultiCall is AccessControl {
      *     gasLimit - gasLimit for subcall
      * @return array of execution statuses
      */
-    function send(SubCall[] memory subCalls)
-        external payable onlyRole(BROADCASTER) returns (SubCallResult[] memory)
-    {
+    function send(SubCall[] memory subCalls) external payable onlyRole(BROADCASTER) returns (SubCallResult[] memory) {
         uint256 len = subCalls.length;
         SubCallResult[] memory subcallResults = new SubCallResult[](len);
 
@@ -58,11 +56,7 @@ contract MultiCall is AccessControl {
             address addr = subCall.destination;
             bytes memory payload = subCall.payload;
 
-            (bool success, bytes memory result) = addr.call{
-                value: subCall.value,
-                gas: subCall.gasLimit
-            }(payload);
-
+            (bool success, bytes memory result) = addr.call{value: subCall.value, gas: subCall.gasLimit}(payload);
 
             subcallResults[subcallId].success = success;
             subcallResults[subcallId].data = result;

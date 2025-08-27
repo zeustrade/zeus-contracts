@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.6.12;
 
-import './helpers/TestBase.sol';
-import {DeployAll} from './helpers/DeployAll.sol';
-import {StakedZlpMigrator} from '../contracts/exchange/staking/StakedZlpMigrator.sol';
+import "./helpers/TestBase.sol";
+import {DeployAll} from "./helpers/DeployAll.sol";
+import {StakedZlpMigrator} from "../contracts/exchange/staking/StakedZlpMigrator.sol";
 
 contract StakedZlpMigratorTest is DeployAll {
     StakedZlpMigrator public migrator;
@@ -11,7 +11,7 @@ contract StakedZlpMigratorTest is DeployAll {
 
     function setUp() public override {
         DeployAll.setUp();
-        receiver = address(uint160(uint256(keccak256(abi.encodePacked('Receiver')))));
+        receiver = address(uint160(uint256(keccak256(abi.encodePacked("Receiver")))));
 
         vm.startPrank(admin);
         migrator = new StakedZlpMigrator(user, address(zlp), address(stakedZlpTracker), address(feeZlpTracker));
@@ -56,7 +56,7 @@ contract StakedZlpMigratorTest is DeployAll {
         migrator.disable();
 
         vm.prank(admin);
-        vm.expectRevert(bytes('StakedZlpMigrator: not enabled'));
+        vm.expectRevert(bytes("StakedZlpMigrator: not enabled"));
         migrator.transfer(receiver, 1);
     }
 }

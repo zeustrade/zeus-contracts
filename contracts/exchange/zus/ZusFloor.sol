@@ -26,7 +26,7 @@ contract ZusFloor is ReentrancyGuard, TokenManager {
     uint256 public mintedSupply;
     uint256 public multiplierPrecision;
 
-    mapping (address => bool) public isHandler;
+    mapping(address => bool) public isHandler;
 
     modifier onlyHandler() {
         require(isHandler[msg.sender], "ZusFloor: forbidden");
@@ -72,7 +72,12 @@ contract ZusFloor is ReentrancyGuard, TokenManager {
 
     // mint refers to increasing the circulating supply
     // the ZEUS tokens to be transferred out must be pre-transferred into this contract
-    function mint(uint256 _amount, uint256 _maxCost, address _receiver) public onlyHandler nonReentrant returns (uint256) {
+    function mint(uint256 _amount, uint256 _maxCost, address _receiver)
+        public
+        onlyHandler
+        nonReentrant
+        returns (uint256)
+    {
         require(_amount > 0, "ZusFloor: invalid _amount");
 
         uint256 currentMintPrice = getMintPrice();
@@ -91,7 +96,12 @@ contract ZusFloor is ReentrancyGuard, TokenManager {
         return cost;
     }
 
-    function burn(uint256 _amount, uint256 _minOut, address _receiver) public onlyHandler nonReentrant returns (uint256) {
+    function burn(uint256 _amount, uint256 _minOut, address _receiver)
+        public
+        onlyHandler
+        nonReentrant
+        returns (uint256)
+    {
         require(_amount > 0, "ZusFloor: invalid _amount");
 
         uint256 amountOut = getBurnAmountOut(_amount);

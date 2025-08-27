@@ -14,30 +14,30 @@ interface Vm {
 
 contract TestBase {
     // hevm cheatcodes address
-    Vm internal constant vm = Vm(address(uint160(uint256(keccak256('hevm cheat code')))));
+    Vm internal constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
 
     // Assertions (minimal set used in tests)
     function assertTrue(bool condition) internal pure {
-        require(condition, 'assertTrue failed');
+        require(condition, "assertTrue failed");
     }
 
     function assertEq(uint256 a, uint256 b) internal pure {
-        require(a == b, 'assertEq(uint256) failed');
+        require(a == b, "assertEq(uint256) failed");
     }
 
     function assertEq(address a, address b) internal pure {
-        require(a == b, 'assertEq(address) failed');
+        require(a == b, "assertEq(address) failed");
     }
 
     function assertEq(bool a, bool b) internal pure {
-        require(a == b, 'assertEq(bool) failed');
+        require(a == b, "assertEq(bool) failed");
     }
 
     function assertGt(uint256 a, uint256 b) internal pure {
-        require(a > b, 'assertGt failed');
+        require(a > b, "assertGt failed");
     }
 
     function assertFalse(bool condition) internal pure {
-        require(!condition, 'assertFalse failed');
+        require(!condition, "assertFalse failed");
     }
 }

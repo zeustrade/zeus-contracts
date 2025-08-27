@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.6.12;
 
-import './helpers/TestBase.sol';
-import {DeployAll} from './helpers/DeployAll.sol';
-import {StakedZlp} from '../contracts/exchange/staking/StakedZlp.sol';
-import {IZlpManager} from '../contracts/exchange/core/interfaces/IZlpManager.sol';
+import "./helpers/TestBase.sol";
+import {DeployAll} from "./helpers/DeployAll.sol";
+import {StakedZlp} from "../contracts/exchange/staking/StakedZlp.sol";
+import {IZlpManager} from "../contracts/exchange/core/interfaces/IZlpManager.sol";
 
 contract StakedZlpTest is DeployAll {
     StakedZlp public stakedZlp;
@@ -13,7 +13,7 @@ contract StakedZlpTest is DeployAll {
     function setUp() public override {
         DeployAll.setUp();
 
-        receiver = address(uint160(uint256(keccak256(abi.encodePacked('Receiver')))));
+        receiver = address(uint160(uint256(keccak256(abi.encodePacked("Receiver")))));
 
         vm.startPrank(admin);
         stakedZlp = new StakedZlp(address(zlp), zlpManager, address(stakedZlpTracker), address(feeZlpTracker));
@@ -47,9 +47,7 @@ contract StakedZlpTest is DeployAll {
         );
 
         vm.prank(user);
-        (bool ok, ) = address(stakedZlp).call(
-            abi.encodeWithSelector(stakedZlp.transfer.selector, receiver, minted / 2)
-        );
+        (bool ok,) = address(stakedZlp).call(abi.encodeWithSelector(stakedZlp.transfer.selector, receiver, minted / 2));
         assertTrue(!ok);
     }
 
@@ -82,7 +80,7 @@ contract StakedZlpTest is DeployAll {
         uint256 amount = minted / 3;
         vm.warp(block.timestamp + COOLDOWN_DURATION + 1);
 
-        address spender = address(uint160(uint256(keccak256(abi.encodePacked('Spender')))));
+        address spender = address(uint160(uint256(keccak256(abi.encodePacked("Spender")))));
         vm.prank(user);
         assertTrue(stakedZlp.approve(spender, amount));
         assertEq(stakedZlp.allowance(user, spender), amount);
@@ -94,7 +92,7 @@ contract StakedZlpTest is DeployAll {
 
     function testApproveZeroSpenderReverts() public {
         vm.prank(user);
-        vm.expectRevert(bytes('StakedZlp: approve to the zero address'));
+        vm.expectRevert(bytes("StakedZlp: approve to the zero address"));
         stakedZlp.approve(address(0), 1);
     }
 
@@ -108,7 +106,7 @@ contract StakedZlpTest is DeployAll {
             abi.encode(block.timestamp - COOLDOWN_DURATION - 1)
         );
 
-        address spender = address(uint160(uint256(keccak256(abi.encodePacked('Spender')))));
+        address spender = address(uint160(uint256(keccak256(abi.encodePacked("Spender")))));
         vm.prank(user);
         stakedZlp.approve(spender, minted / 2);
 

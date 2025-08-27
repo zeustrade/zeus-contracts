@@ -8,11 +8,11 @@ contract ShortsTrackerTest is ShortsTracker {
     constructor(address _vault) public ShortsTracker(_vault) {}
 
     function getNextGlobalShortDataWithRealisedPnl(
-       address _indexToken,
-       uint256 _nextPrice,
-       uint256 _sizeDelta,
-       int256 _realisedPnl,
-       bool _isIncrease
+        address _indexToken,
+        uint256 _nextPrice,
+        uint256 _sizeDelta,
+        int256 _realisedPnl,
+        bool _isIncrease
     ) public view returns (uint256, uint256) {
         uint256 averagePrice = globalShortAveragePrices[_indexToken];
         uint256 priceDelta = averagePrice > _nextPrice ? averagePrice.sub(_nextPrice) : _nextPrice.sub(averagePrice);
@@ -35,13 +35,7 @@ contract ShortsTrackerTest is ShortsTracker {
             delta = size.mul(priceDelta).div(averagePrice);
         }
 
-        uint256 nextAveragePrice = _getNextGlobalAveragePrice(
-            averagePrice,
-            _nextPrice,
-            nextSize,
-            delta,
-            _realisedPnl
-        );
+        uint256 nextAveragePrice = _getNextGlobalAveragePrice(averagePrice, _nextPrice, nextSize, delta, _realisedPnl);
 
         return (nextSize, nextAveragePrice);
     }

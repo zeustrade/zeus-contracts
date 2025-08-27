@@ -20,9 +20,9 @@ contract TokenManager is ReentrancyGuard {
     address public admin;
 
     address[] public signers;
-    mapping (address => bool) public isSigner;
-    mapping (bytes32 => bool) public pendingActions;
-    mapping (address => mapping (bytes32 => bool)) public signedActions;
+    mapping(address => bool) public isSigner;
+    mapping(bytes32 => bool) public pendingActions;
+    mapping(address => mapping(bytes32 => bool)) public signedActions;
 
     event SignalApprove(address token, address spender, uint256 amount, bytes32 action, uint256 nonce);
     event SignalApproveNFT(address token, address spender, uint256 tokenId, bytes32 action, uint256 nonce);
@@ -71,7 +71,11 @@ contract TokenManager is ReentrancyGuard {
         emit SignalApprove(_token, _spender, _amount, action, nonce);
     }
 
-    function signApprove(address _token, address _spender, uint256 _amount, uint256 _nonce) external nonReentrant onlySigner {
+    function signApprove(address _token, address _spender, uint256 _amount, uint256 _nonce)
+        external
+        nonReentrant
+        onlySigner
+    {
         bytes32 action = keccak256(abi.encodePacked("approve", _token, _spender, _amount, _nonce));
         _validateAction(action);
         require(!signedActions[msg.sender][action], "TokenManager: already signed");
@@ -79,7 +83,11 @@ contract TokenManager is ReentrancyGuard {
         emit SignAction(action, _nonce);
     }
 
-    function approve(address _token, address _spender, uint256 _amount, uint256 _nonce) external nonReentrant onlyAdmin {
+    function approve(address _token, address _spender, uint256 _amount, uint256 _nonce)
+        external
+        nonReentrant
+        onlyAdmin
+    {
         bytes32 action = keccak256(abi.encodePacked("approve", _token, _spender, _amount, _nonce));
         _validateAction(action);
         _validateAuthorization(action);
@@ -96,7 +104,11 @@ contract TokenManager is ReentrancyGuard {
         emit SignalApproveNFT(_token, _spender, _tokenId, action, nonce);
     }
 
-    function signApproveNFT(address _token, address _spender, uint256 _tokenId, uint256 _nonce) external nonReentrant onlySigner {
+    function signApproveNFT(address _token, address _spender, uint256 _tokenId, uint256 _nonce)
+        external
+        nonReentrant
+        onlySigner
+    {
         bytes32 action = keccak256(abi.encodePacked("approveNFT", _token, _spender, _tokenId, _nonce));
         _validateAction(action);
         require(!signedActions[msg.sender][action], "TokenManager: already signed");
@@ -104,7 +116,11 @@ contract TokenManager is ReentrancyGuard {
         emit SignAction(action, _nonce);
     }
 
-    function approveNFT(address _token, address _spender, uint256 _tokenId, uint256 _nonce) external nonReentrant onlyAdmin {
+    function approveNFT(address _token, address _spender, uint256 _tokenId, uint256 _nonce)
+        external
+        nonReentrant
+        onlyAdmin
+    {
         bytes32 action = keccak256(abi.encodePacked("approveNFT", _token, _spender, _tokenId, _nonce));
         _validateAction(action);
         _validateAuthorization(action);
@@ -113,7 +129,11 @@ contract TokenManager is ReentrancyGuard {
         _clearAction(action, _nonce);
     }
 
-    function signalApproveNFTs(address _token, address _spender, uint256[] memory _tokenIds) external nonReentrant onlyAdmin {
+    function signalApproveNFTs(address _token, address _spender, uint256[] memory _tokenIds)
+        external
+        nonReentrant
+        onlyAdmin
+    {
         actionsNonce++;
         uint256 nonce = actionsNonce;
         bytes32 action = keccak256(abi.encodePacked("approveNFTs", _token, _spender, _tokenIds, nonce));
@@ -121,7 +141,11 @@ contract TokenManager is ReentrancyGuard {
         emit SignalApproveNFTs(_token, _spender, _tokenIds, action, nonce);
     }
 
-    function signApproveNFTs(address _token, address _spender, uint256[] memory _tokenIds, uint256 _nonce) external nonReentrant onlySigner {
+    function signApproveNFTs(address _token, address _spender, uint256[] memory _tokenIds, uint256 _nonce)
+        external
+        nonReentrant
+        onlySigner
+    {
         bytes32 action = keccak256(abi.encodePacked("approveNFTs", _token, _spender, _tokenIds, _nonce));
         _validateAction(action);
         require(!signedActions[msg.sender][action], "TokenManager: already signed");
@@ -129,19 +153,23 @@ contract TokenManager is ReentrancyGuard {
         emit SignAction(action, _nonce);
     }
 
-    function approveNFTs(address _token, address _spender, uint256[] memory _tokenIds, uint256 _nonce) external nonReentrant onlyAdmin {
+    function approveNFTs(address _token, address _spender, uint256[] memory _tokenIds, uint256 _nonce)
+        external
+        nonReentrant
+        onlyAdmin
+    {
         bytes32 action = keccak256(abi.encodePacked("approveNFTs", _token, _spender, _tokenIds, _nonce));
         _validateAction(action);
         _validateAuthorization(action);
 
-        for (uint256 i = 0 ; i < _tokenIds.length; i++) {
+        for (uint256 i = 0; i < _tokenIds.length; i++) {
             IERC721(_token).approve(_spender, _tokenIds[i]);
         }
         _clearAction(action, _nonce);
     }
 
     function receiveNFTs(address _token, address _sender, uint256[] memory _tokenIds) external nonReentrant onlyAdmin {
-        for (uint256 i = 0 ; i < _tokenIds.length; i++) {
+        for (uint256 i = 0; i < _tokenIds.length; i++) {
             IERC721(_token).transferFrom(_sender, address(this), _tokenIds[i]);
         }
     }
@@ -181,7 +209,11 @@ contract TokenManager is ReentrancyGuard {
         emit SignalSetGov(_timelock, _target, _gov, action, nonce);
     }
 
-    function signSetGov(address _timelock, address _target, address _gov, uint256 _nonce) external nonReentrant onlySigner {
+    function signSetGov(address _timelock, address _target, address _gov, uint256 _nonce)
+        external
+        nonReentrant
+        onlySigner
+    {
         bytes32 action = keccak256(abi.encodePacked("signalSetGov", _timelock, _target, _gov, _nonce));
         _validateAction(action);
         require(!signedActions[msg.sender][action], "TokenManager: already signed");

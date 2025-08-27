@@ -21,7 +21,8 @@ contract VaultPriceFeed is IVaultPriceFeed {
     uint256 public constant MAX_ADJUSTMENT_BASIS_POINTS = 20;
 
     // Identifier of the Sequencer offline flag on the Flags contract
-    address constant private FLAG_ARBITRUM_SEQ_OFFLINE = address(bytes20(bytes32(uint256(keccak256("chainlink.flags.arbitrum-seq-offline")) - 1)));
+    address private constant FLAG_ARBITRUM_SEQ_OFFLINE =
+        address(bytes20(bytes32(uint256(keccak256("chainlink.flags.arbitrum-seq-offline")) - 1)));
 
     address public gov;
     address public chainlinkFlags;
@@ -42,19 +43,19 @@ contract VaultPriceFeed is IVaultPriceFeed {
     address public ethBnb;
     address public btcBnb;
 
-    mapping (address => address) public priceFeeds;
-    mapping (address => uint256) public priceDecimals;
-    mapping (address => uint256) public spreadBasisPoints;
+    mapping(address => address) public priceFeeds;
+    mapping(address => uint256) public priceDecimals;
+    mapping(address => uint256) public spreadBasisPoints;
     // Chainlink can return prices for stablecoins
     // that differs from 1 USD by a larger percentage than stableSwapFeeBasisPoints
     // we use strictStableTokens to cap the price to 1 USD
     // this allows us to configure stablecoins like DAI as being a stableToken
     // while not being a strictStableToken
-    mapping (address => bool) public strictStableTokens;
+    mapping(address => bool) public strictStableTokens;
 
-    mapping (address => uint256) public override adjustmentBasisPoints;
-    mapping (address => bool) public override isAdjustmentAdditive;
-    mapping (address => uint256) public lastAdjustmentTimings;
+    mapping(address => uint256) public override adjustmentBasisPoints;
+    mapping(address => bool) public override isAdjustmentAdditive;
+    mapping(address => uint256) public lastAdjustmentTimings;
 
     modifier onlyGov() {
         require(msg.sender == gov, "VaultPriceFeed: forbidden");
@@ -134,19 +135,25 @@ contract VaultPriceFeed is IVaultPriceFeed {
         maxStrictPriceDeviation = _maxStrictPriceDeviation;
     }
 
-    function setTokenConfig(
-        address _token,
-        address _priceFeed,
-        uint256 _priceDecimals,
-        bool _isStrictStable
-    ) external override onlyGov {
+    function setTokenConfig(address _token, address _priceFeed, uint256 _priceDecimals, bool _isStrictStable)
+        external
+        override
+        onlyGov
+    {
         priceFeeds[_token] = _priceFeed;
         priceDecimals[_token] = _priceDecimals;
         strictStableTokens[_token] = _isStrictStable;
     }
 
-    function getPrice(address _token, bool _maximise, bool _includeAmmPrice, bool /* _useSwapPricing */) public override view returns (uint256) {
-        uint256 price = useV2Pricing ? getPriceV2(_token, _maximise, _includeAmmPrice) : getPriceV1(_token, _maximise, _includeAmmPrice);
+    function getPrice(address _token, bool _maximise, bool _includeAmmPrice, bool /* _useSwapPricing */ )
+        public
+        view
+        override
+        returns (uint256)
+    {
+        uint256 price = useV2Pricing
+            ? getPriceV2(_token, _maximise, _includeAmmPrice)
+            : getPriceV1(_token, _maximise, _includeAmmPrice);
 
         uint256 adjustmentBps = adjustmentBasisPoints[_token];
         if (adjustmentBps > 0) {
@@ -214,7 +221,6 @@ contract VaultPriceFeed is IVaultPriceFeed {
         uint256 price;
 
         if (strictStableTokens[_token]) {
-
             return ONE_USD;
         }
 
@@ -283,13 +289,11 @@ contract VaultPriceFeed is IVaultPriceFeed {
         return _primaryPrice;
     }
 
-    function getLatestPrimaryPrice(address _token) public override view returns (uint256) {
+    function getLatestPrimaryPrice(address _token) public view override returns (uint256) {
         // address priceFeedAddress = priceFeeds[_token];
         // require(priceFeedAddress != address(0), "VaultPriceFeed: invalid price feed");
 
         // IPriceFeed priceFeed = IPriceFeed(priceFeedAddress);
-
-        
 
         // int256 price = priceFeed.latestAnswer();
         // require(price > 0, "VaultPriceFeed: invalid price");
@@ -299,7 +303,7 @@ contract VaultPriceFeed is IVaultPriceFeed {
         return getSecondaryPrice(_token, 0, true);
     }
 
-    function getPrimaryPrice(address _token, bool _maximise) public override view returns (uint256) {
+    function getPrimaryPrice(address _token, bool _maximise) public view override returns (uint256) {
         return getSecondaryPrice(_token, 0, _maximise);
         address priceFeedAddress = priceFeeds[_token];
         require(priceFeedAddress != address(0), "VaultPriceFeed: invalid price feed");
@@ -307,19 +311,18 @@ contract VaultPriceFeed is IVaultPriceFeed {
         if (chainlinkFlags != address(0)) {
             bool isRaised = IChainlinkFlags(chainlinkFlags).getFlag(FLAG_ARBITRUM_SEQ_OFFLINE);
             if (isRaised) {
-                    // If flag is raised we shouldn't perform any critical operations
+                // If flag is raised we shouldn't perform any critical operations
                 revert("Chainlink feeds are not being updated");
             }
         }
 
         IPriceFeed priceFeed = IPriceFeed(priceFeedAddress);
 
-
         uint256 price = 0;
         uint80 roundId = priceFeed.latestRound();
 
         for (uint80 i = 0; i < priceSampleSpace; i++) {
-            if (roundId <= i) { break; }
+            if (roundId <= i) break;
             uint256 p;
 
             if (i == 0) {
@@ -327,7 +330,7 @@ contract VaultPriceFeed is IVaultPriceFeed {
                 require(_p > 0, "VaultPriceFeed: invalid price");
                 p = uint256(_p);
             } else {
-                (, int256 _p, , ,) = priceFeed.getRoundData(roundId - i);
+                (, int256 _p,,,) = priceFeed.getRoundData(roundId - i);
                 require(_p > 0, "VaultPriceFeed: invalid price");
                 p = uint256(_p);
             }
@@ -354,11 +357,11 @@ contract VaultPriceFeed is IVaultPriceFeed {
     }
 
     function getSecondaryPrice(address _token, uint256 _referencePrice, bool _maximise) public view returns (uint256) {
-        if (secondaryPriceFeed == address(0)) { return _referencePrice; }
+        if (secondaryPriceFeed == address(0)) return _referencePrice;
         return ISecondaryPriceFeed(secondaryPriceFeed).getPrice(_token, _referencePrice, _maximise);
     }
 
-    function getAmmPrice(address _token) public override view returns (uint256) {
+    function getAmmPrice(address _token) public view override returns (uint256) {
         if (_token == bnb) {
             // for bnbBusd, reserve0: BNB, reserve1: BUSD
             return getPairPrice(bnbBusd, true);
@@ -386,12 +389,12 @@ contract VaultPriceFeed is IVaultPriceFeed {
     // if divByReserve0: calculate price as reserve1 / reserve0
     // if !divByReserve1: calculate price as reserve0 / reserve1
     function getPairPrice(address _pair, bool _divByReserve0) public view returns (uint256) {
-        (uint256 reserve0, uint256 reserve1, ) = IPancakePair(_pair).getReserves();
+        (uint256 reserve0, uint256 reserve1,) = IPancakePair(_pair).getReserves();
         if (_divByReserve0) {
-            if (reserve0 == 0) { return 0; }
+            if (reserve0 == 0) return 0;
             return reserve1.mul(PRICE_PRECISION).div(reserve0);
         }
-        if (reserve1 == 0) { return 0; }
+        if (reserve1 == 0) return 0;
         return reserve0.mul(PRICE_PRECISION).div(reserve1);
     }
 }

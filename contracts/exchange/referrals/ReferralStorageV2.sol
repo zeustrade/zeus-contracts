@@ -19,14 +19,14 @@ contract ReferralStorageV2 is Governable, IReferralStorageV2 {
 
     uint256 public constant BASIS_POINTS = 10000;
 
-    mapping (uint256 => Tier) public tiers;
-    mapping (address => uint256) public override referrerTiers; // link between user <> tier
+    mapping(uint256 => Tier) public tiers;
+    mapping(address => uint256) public override referrerTiers; // link between user <> tier
 
-    mapping (address => bool) public isHandler;
+    mapping(address => bool) public isHandler;
 
-    mapping (bytes32 => address) public override codeOwners;
-    mapping (address => bytes32) public override ownerToCode;
-    mapping (address => bytes32) public override traderReferralCodes;
+    mapping(bytes32 => address) public override codeOwners;
+    mapping(address => bytes32) public override ownerToCode;
+    mapping(address => bytes32) public override traderReferralCodes;
 
     event SetHandler(address handler, bool isActive);
     event SetTraderReferralCode(address account, bytes32 code);
@@ -62,7 +62,6 @@ contract ReferralStorageV2 is Governable, IReferralStorageV2 {
     }
 
     function setTraderReferralCode(address _account, bytes32 _code) external override onlyHandler {
-
         // is not allowed to refer himself
         if (_account == codeOwners[_code]) {
             return;
@@ -99,7 +98,7 @@ contract ReferralStorageV2 is Governable, IReferralStorageV2 {
         emit GovSetCodeOwner(_code, _newAccount);
     }
 
-    function getTraderReferralInfo(address _account) external override view returns (bytes32, address) {
+    function getTraderReferralInfo(address _account) external view override returns (bytes32, address) {
         bytes32 code = traderReferralCodes[_account];
         address referrer;
         if (code != bytes32(0)) {

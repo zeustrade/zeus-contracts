@@ -2,15 +2,15 @@
 
 pragma solidity 0.6.12;
 
-import '../libraries/math/SafeMath.sol';
-import '../libraries/token/IERC20.sol';
+import "../libraries/math/SafeMath.sol";
+import "../libraries/token/IERC20.sol";
 
-import '../core/interfaces/IZlpManager.sol';
+import "../core/interfaces/IZlpManager.sol";
 
-import './interfaces/IRewardTracker.sol';
-import './interfaces/IRewardTracker.sol';
+import "./interfaces/IRewardTracker.sol";
+import "./interfaces/IRewardTracker.sol";
 
-import '../access/Governable.sol';
+import "../access/Governable.sol";
 
 // provide a way to migrate staked ZLP tokens by unstaking from the sender
 // and staking for the receiver
@@ -41,9 +41,9 @@ contract StakedZlpMigrator is Governable {
     }
 
     function _transfer(address _sender, address _recipient, uint256 _amount) private {
-        require(isEnabled, 'StakedZlpMigrator: not enabled');
-        require(_sender != address(0), 'StakedZlpMigrator: transfer from the zero address');
-        require(_recipient != address(0), 'StakedZlpMigrator: transfer to the zero address');
+        require(isEnabled, "StakedZlpMigrator: not enabled");
+        require(_sender != address(0), "StakedZlpMigrator: transfer from the zero address");
+        require(_recipient != address(0), "StakedZlpMigrator: transfer to the zero address");
 
         // Unstake to this contract then restake for recipient, mirroring new logic
         IRewardTracker(stakedZlpTracker).unstakeForAccount(_sender, feeZlpTracker, _amount, address(this));

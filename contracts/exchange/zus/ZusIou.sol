@@ -10,7 +10,7 @@ import "./interfaces/IZusIou.sol";
 contract ZusIou is IERC20, IZusIou {
     using SafeMath for uint256;
 
-    mapping (address => uint256) private _balances;
+    mapping(address => uint256) private _balances;
     uint256 public override totalSupply;
 
     string public name;
@@ -19,7 +19,7 @@ contract ZusIou is IERC20, IZusIou {
 
     address public minter;
 
-    constructor (address _minter, string memory _name, string memory _symbol) public {
+    constructor(address _minter, string memory _name, string memory _symbol) public {
         name = _name;
         symbol = _symbol;
         minter = _minter;
@@ -37,22 +37,27 @@ contract ZusIou is IERC20, IZusIou {
     }
 
     // empty implementation, ZusIou tokens are non-transferrable
-    function transfer(address /* recipient */, uint256 /* amount */) public override returns (bool) {
+    function transfer(address, /* recipient */ uint256 /* amount */ ) public override returns (bool) {
         revert("ZusIou: non-transferrable");
     }
 
     // empty implementation, ZusIou tokens are non-transferrable
-    function allowance(address /* owner */, address /* spender */) public view virtual override returns (uint256) {
+    function allowance(address, /* owner */ address /* spender */ ) public view virtual override returns (uint256) {
         return 0;
     }
 
     // empty implementation, ZusIou tokens are non-transferrable
-    function approve(address /* spender */, uint256 /* amount */) public virtual override returns (bool) {
+    function approve(address, /* spender */ uint256 /* amount */ ) public virtual override returns (bool) {
         revert("ZusIou: non-transferrable");
     }
 
     // empty implementation, ZusIou tokens are non-transferrable
-    function transferFrom(address /* sender */, address /* recipient */, uint256 /* amount */) public virtual override returns (bool) {
+    function transferFrom(address, /* sender */ address, /* recipient */ uint256 /* amount */ )
+        public
+        virtual
+        override
+        returns (bool)
+    {
         revert("ZusIou: non-transferrable");
     }
 

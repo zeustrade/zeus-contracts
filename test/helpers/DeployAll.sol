@@ -1,23 +1,23 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.6.12;
 
-import './TestBase.sol';
+import "./TestBase.sol";
 
-import {Vault} from '../../contracts/exchange/core/Vault.sol';
-import {VaultUtils} from '../../contracts/exchange/core/VaultUtils.sol';
-import {VaultPriceFeed} from '../../contracts/exchange/core/VaultPriceFeed.sol';
-import {FastPriceFeed} from '../../contracts/exchange/oracle/FastPriceFeed.sol';
-import {ShortsTracker} from '../../contracts/exchange/core/ShortsTracker.sol';
-import {IShortsTracker} from '../../contracts/exchange/core/interfaces/IShortsTracker.sol';
-import {ZlpManager} from '../../contracts/exchange/core/ZlpManager.sol';
-import {ZLP} from '../../contracts/exchange/zus/ZLP.sol';
-import {USDG} from '../../contracts/exchange/tokens/USDG.sol';
-import {Token} from '../../contracts/exchange/tokens/Token.sol';
-import {RewardRouterV2} from '../../contracts/exchange/staking/RewardRouterV2.sol';
-import {RewardTracker} from '../../contracts/exchange/staking/RewardTracker.sol';
-import {RewardDistributor} from '../../contracts/exchange/staking/RewardDistributor.sol';
+import {Vault} from "../../contracts/exchange/core/Vault.sol";
+import {VaultUtils} from "../../contracts/exchange/core/VaultUtils.sol";
+import {VaultPriceFeed} from "../../contracts/exchange/core/VaultPriceFeed.sol";
+import {FastPriceFeed} from "../../contracts/exchange/oracle/FastPriceFeed.sol";
+import {ShortsTracker} from "../../contracts/exchange/core/ShortsTracker.sol";
+import {IShortsTracker} from "../../contracts/exchange/core/interfaces/IShortsTracker.sol";
+import {ZlpManager} from "../../contracts/exchange/core/ZlpManager.sol";
+import {ZLP} from "../../contracts/exchange/zus/ZLP.sol";
+import {USDG} from "../../contracts/exchange/tokens/USDG.sol";
+import {Token} from "../../contracts/exchange/tokens/Token.sol";
+import {RewardRouterV2} from "../../contracts/exchange/staking/RewardRouterV2.sol";
+import {RewardTracker} from "../../contracts/exchange/staking/RewardTracker.sol";
+import {RewardDistributor} from "../../contracts/exchange/staking/RewardDistributor.sol";
 // NOTE: 0.8.x ZUS is incompatible with 0.6.12 tests; use generic Token instead
-import {WETH} from '../../contracts/exchange/tokens/WETH.sol';
+import {WETH} from "../../contracts/exchange/tokens/WETH.sol";
 
 contract DeployAll is TestBase {
     // Core protocol
@@ -54,7 +54,7 @@ contract DeployAll is TestBase {
     function setUp() public virtual {
         vm.warp(2 hours);
         admin = msg.sender;
-        user = address(uint160(uint256(keccak256(abi.encodePacked('Zeus')))));
+        user = address(uint160(uint256(keccak256(abi.encodePacked("Zeus")))));
 
         vm.startPrank(admin);
 
@@ -64,13 +64,8 @@ contract DeployAll is TestBase {
         vaultUtils = new VaultUtils(vault);
         shortsTracker = new ShortsTracker(address(vault));
         zlp = new ZLP();
-        zlpManager = new ZlpManager(
-            address(vault),
-            address(usdg),
-            address(zlp),
-            address(shortsTracker),
-            COOLDOWN_DURATION
-        );
+        zlpManager =
+            new ZlpManager(address(vault), address(usdg), address(zlp), address(shortsTracker), COOLDOWN_DURATION);
 
         vault.initialize2(address(0), address(usdg), address(vaultPriceFeed), 100e30, 10000, 10000);
         vault.setVaultUtils(vaultUtils);
@@ -86,7 +81,7 @@ contract DeployAll is TestBase {
         collateralToken = new Token();
         collateralToken.mint(user, INITIAL_USER_BALANCE);
 
-        weth = new WETH('Wrapped Ether', 'WETH', 18);
+        weth = new WETH("Wrapped Ether", "WETH", 18);
 
         fastPriceFeed = new FastPriceFeed(30 minutes, 2 hours, 0, 50, address(0), address(admin), address(0));
 
@@ -119,7 +114,7 @@ contract DeployAll is TestBase {
         // mint sufficient supply to admin for tests and distributors
         zus.mint(admin, 10_000e18);
 
-        stakedZusTracker = new RewardTracker('Staked ZUS', 'sZUS');
+        stakedZusTracker = new RewardTracker("Staked ZUS", "sZUS");
         stakedZusDistributor = new RewardDistributor(address(zus), address(stakedZusTracker));
         {
             address[] memory depositTokens = new address[](1);
@@ -127,7 +122,7 @@ contract DeployAll is TestBase {
             stakedZusTracker.initialize(depositTokens, address(stakedZusDistributor));
         }
 
-        feeZlpTracker = new RewardTracker('Fee ZLP', 'fZLP');
+        feeZlpTracker = new RewardTracker("Fee ZLP", "fZLP");
         feeZlpDistributor = new RewardDistributor(address(weth), address(feeZlpTracker));
         {
             address[] memory depositTokens = new address[](1);
@@ -135,7 +130,7 @@ contract DeployAll is TestBase {
             feeZlpTracker.initialize(depositTokens, address(feeZlpDistributor));
         }
 
-        stakedZlpTracker = new RewardTracker('Staked ZLP', 'sZLP');
+        stakedZlpTracker = new RewardTracker("Staked ZLP", "sZLP");
         stakedZlpDistributor = new RewardDistributor(address(zus), address(stakedZlpTracker));
         {
             address[] memory depositTokens = new address[](2);

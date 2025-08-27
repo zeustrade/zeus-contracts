@@ -17,11 +17,11 @@ contract OrderBookReader {
         uint256 addressLength;
     }
 
-    function getIncreaseOrders(
-        address payable _orderBookAddress, 
-        address _account,
-        uint256[] memory _indices
-    ) external view returns (uint256[] memory, address[] memory) {
+    function getIncreaseOrders(address payable _orderBookAddress, address _account, uint256[] memory _indices)
+        external
+        view
+        returns (uint256[] memory, address[] memory)
+    {
         Vars memory vars = Vars(0, 0, _account, 5, 3);
 
         uint256[] memory uintProps = new uint256[](vars.uintLength * _indices.length);
@@ -59,11 +59,11 @@ contract OrderBookReader {
         return (uintProps, addressProps);
     }
 
-    function getDecreaseOrders(
-        address payable _orderBookAddress, 
-        address _account,
-        uint256[] memory _indices
-    ) external view returns (uint256[] memory, address[] memory) {
+    function getDecreaseOrders(address payable _orderBookAddress, address _account, uint256[] memory _indices)
+        external
+        view
+        returns (uint256[] memory, address[] memory)
+    {
         Vars memory vars = Vars(0, 0, _account, 5, 2);
 
         uint256[] memory uintProps = new uint256[](vars.uintLength * _indices.length);
@@ -99,11 +99,11 @@ contract OrderBookReader {
         return (uintProps, addressProps);
     }
 
-    function getSwapOrders(
-        address payable _orderBookAddress, 
-        address _account,
-        uint256[] memory _indices
-    ) external view returns (uint256[] memory, address[] memory) {
+    function getSwapOrders(address payable _orderBookAddress, address _account, uint256[] memory _indices)
+        external
+        view
+        returns (uint256[] memory, address[] memory)
+    {
         Vars memory vars = Vars(0, 0, _account, 5, 3);
 
         uint256[] memory uintProps = new uint256[](vars.uintLength * _indices.length);
@@ -117,9 +117,9 @@ contract OrderBookReader {
                 address path0,
                 address path1,
                 address path2,
-                uint256 amountIn, 
-                uint256 minOut, 
-                uint256 triggerRatio, 
+                uint256 amountIn,
+                uint256 minOut,
+                uint256 triggerRatio,
                 bool triggerAboveThreshold,
                 bool shouldUnwrap,
                 // uint256 executionFee

@@ -39,7 +39,6 @@ abstract contract Context {
     }
 }
 
-
 // File @openzeppelin/contracts/access/Ownable.sol@v4.9.5
 
 // Original license: SPDX_License_Identifier: MIT
@@ -124,7 +123,6 @@ abstract contract Ownable is Context {
     }
 }
 
-
 // File @openzeppelin/contracts/token/ERC20/IERC20.sol@v4.9.5
 
 // Original license: SPDX_License_Identifier: MIT
@@ -206,7 +204,6 @@ interface IERC20 {
     function transferFrom(address from, address to, uint256 amount) external returns (bool);
 }
 
-
 // File @openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol@v4.9.5
 
 // Original license: SPDX_License_Identifier: MIT
@@ -236,15 +233,12 @@ interface IERC20Metadata is IERC20 {
     function decimals() external view returns (uint8);
 }
 
-
 // File @openzeppelin/contracts/token/ERC20/ERC20.sol@v4.9.5
 
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v4.9.0) (token/ERC20/ERC20.sol)
 
 pragma solidity ^0.8.0;
-
-
 
 /**
  * @dev Implementation of the {IERC20} interface.
@@ -478,7 +472,8 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
         _afterTokenTransfer(from, to, amount);
     }
 
-    /** @dev Creates `amount` tokens and assigns them to `account`, increasing
+    /**
+     * @dev Creates `amount` tokens and assigns them to `account`, increasing
      * the total supply.
      *
      * Emits a {Transfer} event with `from` set to the zero address.
@@ -603,7 +598,6 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
     function _afterTokenTransfer(address from, address to, uint256 amount) internal virtual {}
 }
 
-
 // File @openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol@v4.9.5
 
 // Original license: SPDX_License_Identifier: MIT
@@ -671,15 +665,8 @@ interface IERC20Permit {
      *
      * CAUTION: See Security Considerations above.
      */
-    function permit(
-        address owner,
-        address spender,
-        uint256 value,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) external;
+    function permit(address owner, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
+        external;
 
     /**
      * @dev Returns the current nonce for `owner`. This value must be
@@ -696,7 +683,6 @@ interface IERC20Permit {
     // solhint-disable-next-line func-name-mixedcase
     function DOMAIN_SEPARATOR() external view returns (bytes32);
 }
-
 
 // File @openzeppelin/contracts/utils/Counters.sol@v4.9.5
 
@@ -744,7 +730,6 @@ library Counters {
     }
 }
 
-
 // File @openzeppelin/contracts/utils/math/Math.sol@v4.9.5
 
 // Original license: SPDX_License_Identifier: MIT
@@ -760,6 +745,7 @@ library Math {
         Down, // Toward negative infinity
         Up, // Toward infinity
         Zero // Toward zero
+
     }
 
     /**
@@ -1087,7 +1073,6 @@ library Math {
     }
 }
 
-
 // File @openzeppelin/contracts/utils/math/SignedMath.sol@v4.9.5
 
 // Original license: SPDX_License_Identifier: MIT
@@ -1134,14 +1119,12 @@ library SignedMath {
     }
 }
 
-
 // File @openzeppelin/contracts/utils/Strings.sol@v4.9.5
 
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v4.9.0) (utils/Strings.sol)
 
 pragma solidity ^0.8.0;
-
 
 /**
  * @dev String operations.
@@ -1221,7 +1204,6 @@ library Strings {
     }
 }
 
-
 // File @openzeppelin/contracts/utils/cryptography/ECDSA.sol@v4.9.5
 
 // Original license: SPDX_License_Identifier: MIT
@@ -1242,6 +1224,7 @@ library ECDSA {
         InvalidSignatureLength,
         InvalidSignatureS,
         InvalidSignatureV // Deprecated in v4.8
+
     }
 
     function _throwError(RecoverError error) private pure {
@@ -1440,7 +1423,6 @@ library ECDSA {
     }
 }
 
-
 // File @openzeppelin/contracts/interfaces/IERC5267.sol@v4.9.5
 
 // Original license: SPDX_License_Identifier: MIT
@@ -1471,7 +1453,6 @@ interface IERC5267 {
             uint256[] memory extensions
         );
 }
-
 
 // File @openzeppelin/contracts/utils/StorageSlot.sol@v4.9.5
 
@@ -1614,7 +1595,6 @@ library StorageSlot {
     }
 }
 
-
 // File @openzeppelin/contracts/utils/ShortStrings.sol@v4.9.5
 
 // Original license: SPDX_License_Identifier: MIT
@@ -1738,15 +1718,12 @@ library ShortStrings {
     }
 }
 
-
 // File @openzeppelin/contracts/utils/cryptography/EIP712.sol@v4.9.5
 
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v4.9.0) (utils/cryptography/EIP712.sol)
 
 pragma solidity ^0.8.8;
-
-
 
 /**
  * @dev https://eips.ethereum.org/EIPS/eip-712[EIP 712] is a standard for hashing and signing of typed structured data.
@@ -1882,17 +1859,12 @@ abstract contract EIP712 is IERC5267 {
     }
 }
 
-
 // File @openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol@v4.9.5
 
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v4.9.4) (token/ERC20/extensions/ERC20Permit.sol)
 
 pragma solidity ^0.8.0;
-
-
-
-
 
 /**
  * @dev Implementation of the ERC20 Permit extension allowing approvals to be made via signatures, as defined in
@@ -1931,15 +1903,11 @@ abstract contract ERC20Permit is ERC20, IERC20Permit, EIP712 {
     /**
      * @inheritdoc IERC20Permit
      */
-    function permit(
-        address owner,
-        address spender,
-        uint256 value,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) public virtual override {
+    function permit(address owner, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
+        public
+        virtual
+        override
+    {
         require(block.timestamp <= deadline, "ERC20Permit: expired deadline");
 
         bytes32 structHash = keccak256(abi.encode(_PERMIT_TYPEHASH, owner, spender, value, _useNonce(owner), deadline));
@@ -1979,11 +1947,9 @@ abstract contract ERC20Permit is ERC20, IERC20Permit, EIP712 {
     }
 }
 
-
 // File contracts/token/ZUS.sol
 // Original license: SPDX_License_Identifier: MIT
 pragma solidity 0.8.20;
-
 
 contract ZUS is ERC20, ERC20Permit, Ownable {
     constructor(address initialOwner) ERC20("ZEUS Exchange Token", "ZUS") ERC20Permit("ZEUS Exchange Token") {
