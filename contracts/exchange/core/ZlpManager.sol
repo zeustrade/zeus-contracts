@@ -24,10 +24,10 @@ contract ZlpManager is ReentrancyGuard, Governable, IZlpManager {
     uint256 public constant MAX_COOLDOWN_DURATION = 48 hours;
     uint256 public constant BASIS_POINTS_DIVISOR = 10000;
 
-    IVault public override vault;
+    IVault public immutable override vault;
     IShortsTracker public shortsTracker;
-    address public override usdg;
-    address public override zlp;
+    address public immutable override usdg;
+    address public immutable override zlp;
 
     uint256 public override cooldownDuration;
     mapping(address => uint256) public override lastAddedAt;

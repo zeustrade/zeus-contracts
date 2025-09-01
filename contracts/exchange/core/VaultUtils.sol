@@ -7,11 +7,9 @@ import "../libraries/utils/EnumerableSet.sol";
 import "../libraries/token/IERC20.sol";
 import "./interfaces/IVault.sol";
 import "./interfaces/IVaultUtils.sol";
-
-import "../access/Governable.sol";
 import "./Vault.sol";
 
-contract VaultUtils is IVaultUtils, Governable {
+contract VaultUtils is IVaultUtils {
     using SafeMath for uint256;
     using EnumerableSet for EnumerableSet.UintSet;
 
@@ -32,7 +30,7 @@ contract VaultUtils is IVaultUtils, Governable {
         bool isLong;
     }
 
-    IVault public vault;
+    IVault public immutable vault;
     EnumerableSet.UintSet internal positions;
     mapping(bytes32 => UserPosition) public userPositions;
 

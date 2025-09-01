@@ -16,17 +16,25 @@ contract Router is IRouter {
     using SafeERC20 for IERC20;
     using Address for address payable;
 
+    struct GovProposal {
+        uint256 deadline;
+        bool isActive;
+    }
+
     address public gov;
+    mapping(address => GovProposal) public govProposals;
 
     // wrapped BNB / ETH
-    address public weth;
-    address public usdg;
-    address public vault;
+    address public immutable weth;
+    address public immutable usdg;
+    address public immutable vault;
 
     mapping(address => bool) public plugins;
     mapping(address => mapping(address => bool)) public approvedPlugins;
 
     event Swap(address account, address tokenIn, address tokenOut, uint256 amountIn, uint256 amountOut);
+    event GovernanceTransferRequested(address indexed newGov, uint256 deadline);
+    event GovernanceTransferred(address indexed oldGov, address indexed newGov);
 
     modifier onlyGov() {
         require(msg.sender == gov, "Router: forbidden");
@@ -46,7 +54,32 @@ contract Router is IRouter {
     }
 
     function setGov(address _gov) external onlyGov {
-        gov = _gov;
+        require(_gov != address(0), "Router: invalid address");
+        require(_gov != gov, "Router: same governance");
+        _requestForGov(_gov, type(uint256).max);
+    }
+
+    function setGovWithDeadline(address _gov, uint256 _deadline) external onlyGov {
+        require(_gov != address(0), "Router: invalid address");
+        require(_gov != gov, "Router: same governance");
+        _requestForGov(_gov, _deadline);
+    }
+
+    function acceptGov() external {
+        GovProposal storage proposal = govProposals[msg.sender];
+        require(proposal.deadline > block.timestamp, "Router: deadline expired");
+        require(proposal.isActive == true, "Router: proposal is not active");
+
+        address oldGov = gov;
+        delete govProposals[msg.sender];
+        gov = msg.sender;
+
+        emit GovernanceTransferred(oldGov, msg.sender);
+    }
+
+    function cancelGovProposal(address _gov) external onlyGov {
+        require(govProposals[_gov].isActive, "Router: proposal not active");
+        delete govProposals[_gov];
     }
 
     function addPlugin(address _plugin) external override onlyGov {
@@ -221,6 +254,12 @@ contract Router is IRouter {
         IERC20(_path[0]).safeTransfer(vault, amount);
         uint256 amountOut = _swap(_path, _minOut, address(this));
         _transferOutETH(amountOut, _receiver);
+    }
+
+    function _requestForGov(address _gov, uint256 _deadline) internal {
+        govProposals[_gov] = GovProposal(_deadline, true);
+
+        emit GovernanceTransferRequested(_gov, _deadline);
     }
 
     function _increasePosition(

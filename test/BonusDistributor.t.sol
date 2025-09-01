@@ -14,8 +14,10 @@ contract BonusDistributorTest is DeployAll {
         bonus = new BonusDistributor(address(zus), address(stakedZusTracker));
         vm.prank(bonus.gov());
         bonus.setGov(admin);
-        vm.prank(admin);
+        vm.startPrank(admin);
+        bonus.acceptGov();
         stakedZusTracker.setHandler(address(bonus), true);
+        vm.stopPrank();
     }
 
     function testAdminAndGov() public {

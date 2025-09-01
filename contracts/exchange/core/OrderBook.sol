@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.6.0;
+pragma solidity 0.6.12;
 
 import "../libraries/math/SafeMath.sol";
 import "../libraries/token/IERC20.sol";
@@ -20,6 +20,11 @@ contract OrderBook is ReentrancyGuard, IOrderBook {
 
     uint256 public constant PRICE_PRECISION = 1e30;
     uint256 public constant USDG_PRECISION = 1e18;
+
+    struct GovProposal {
+        uint256 deadline;
+        bool isActive;
+    }
 
     struct IncreaseOrder {
         address account;
@@ -63,6 +68,7 @@ contract OrderBook is ReentrancyGuard, IOrderBook {
     mapping(address => uint256) public decreaseOrdersIndex;
     mapping(address => mapping(uint256 => SwapOrder)) public swapOrders;
     mapping(address => uint256) public swapOrdersIndex;
+    mapping(address => GovProposal) public govProposals;
 
     address public gov;
     address public weth;
@@ -197,7 +203,7 @@ contract OrderBook is ReentrancyGuard, IOrderBook {
     );
     event UpdateSwapOrder(
         address indexed account,
-        uint256 ordexIndex,
+        uint256 orderIndex,
         address[] path,
         uint256 amountIn,
         uint256 minOut,
@@ -230,6 +236,8 @@ contract OrderBook is ReentrancyGuard, IOrderBook {
     event UpdateMinExecutionFee(uint256 minExecutionFee);
     event UpdateMinPurchaseTokenAmountUsd(uint256 minPurchaseTokenAmountUsd);
     event UpdateGov(address gov);
+    event GovernanceTransferRequested(address indexed newGov, uint256 deadline);
+    event GovernanceTransferred(address indexed oldGov, address indexed newGov);
 
     modifier onlyGov() {
         require(msg.sender == gov, "OrderBook: forbidden");
@@ -278,9 +286,32 @@ contract OrderBook is ReentrancyGuard, IOrderBook {
     }
 
     function setGov(address _gov) external onlyGov {
-        gov = _gov;
+        require(_gov != address(0), "OrderBook: invalid address");
+        require(_gov != gov, "OrderBook: same governance");
+        _requestForGov(_gov, type(uint256).max);
+    }
 
-        emit UpdateGov(_gov);
+    function setGovWithDeadline(address _gov, uint256 _deadline) external onlyGov {
+        require(_gov != address(0), "OrderBook: invalid address");
+        require(_gov != gov, "OrderBook: same governance");
+        _requestForGov(_gov, _deadline);
+    }
+
+    function acceptGov() external {
+        GovProposal storage proposal = govProposals[msg.sender];
+        require(proposal.deadline > block.timestamp, "OrderBook: deadline expired");
+        require(proposal.isActive == true, "OrderBook: proposal is not active");
+
+        address oldGov = gov;
+        delete govProposals[msg.sender];
+        gov = msg.sender;
+
+        emit GovernanceTransferred(oldGov, msg.sender);
+    }
+
+    function cancelGovProposal(address _gov) external onlyGov {
+        require(govProposals[_gov].isActive, "OrderBook: proposal not active");
+        delete govProposals[_gov];
     }
 
     function getSwapOrder(address _account, uint256 _orderIndex)
@@ -907,6 +938,12 @@ contract OrderBook is ReentrancyGuard, IOrderBook {
         );
 
         emit CreateDecreaseOrderAttached(msg.sender, decreaseOrdersIndex[msg.sender], _isLong, _key);
+    }
+
+    function _requestForGov(address _gov, uint256 _deadline) internal {
+        govProposals[_gov] = GovProposal(_deadline, true);
+
+        emit GovernanceTransferRequested(_gov, _deadline);
     }
 
     function _createDecreaseOrder(

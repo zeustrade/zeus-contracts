@@ -18,6 +18,7 @@ contract StakeManagerTest is DeployAll {
         stakeManager.setGov(admin);
 
         vm.startPrank(admin);
+        stakeManager.acceptGov();
         stakedZusTracker.setHandler(address(stakeManager), true);
         vm.stopPrank();
     }

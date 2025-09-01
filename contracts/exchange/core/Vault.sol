@@ -16,6 +16,11 @@ contract Vault is ReentrancyGuard, IVault {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
+    struct GovProposal {
+        uint256 deadline;
+        bool isActive;
+    }
+
     uint256 public constant BASIS_POINTS_DIVISOR = 10000;
     uint256 public constant FUNDING_RATE_PRECISION = 1000000;
     uint256 public constant PRICE_PRECISION = 10 ** 30;
@@ -39,6 +44,7 @@ contract Vault is ReentrancyGuard, IVault {
 
     address public override usdg;
     address public override gov;
+    mapping(address => GovProposal) public govProposals;
 
     uint256 public override whitelistedTokenCount;
 
@@ -208,6 +214,8 @@ contract Vault is ReentrancyGuard, IVault {
     event DecreaseReservedAmount(address token, uint256 amount);
     event IncreaseGuaranteedUsd(address token, uint256 amount);
     event DecreaseGuaranteedUsd(address token, uint256 amount);
+    event GovernanceTransferRequested(address indexed newGov, uint256 deadline);
+    event GovernanceTransferred(address indexed oldGov, address indexed newGov);
 
     function initialize2(
         address _router,
@@ -306,7 +314,34 @@ contract Vault is ReentrancyGuard, IVault {
 
     function setGov(address _gov) external {
         _onlyGov();
-        gov = _gov;
+        _validate(_gov != address(0), 56);
+        _validate(_gov != gov, 57);
+        _requestForGov(_gov, type(uint256).max);
+    }
+
+    function setGovWithDeadline(address _gov, uint256 _deadline) external {
+        _onlyGov();
+        _validate(_gov != address(0), 56);
+        _validate(_gov != gov, 57);
+        _requestForGov(_gov, _deadline);
+    }
+
+    function acceptGov() external {
+        GovProposal storage proposal = govProposals[msg.sender];
+        _validate(proposal.deadline > block.timestamp, 58);
+        _validate(proposal.isActive == true, 59);
+
+        address oldGov = gov;
+        delete govProposals[msg.sender];
+        gov = msg.sender;
+
+        emit GovernanceTransferred(oldGov, msg.sender);
+    }
+
+    function cancelGovProposal(address _gov) external {
+        _onlyGov();
+        _validate(govProposals[_gov].isActive, 60);
+        delete govProposals[_gov];
     }
 
     function setPriceFeed(address _priceFeed) external override {
@@ -945,6 +980,11 @@ contract Vault is ReentrancyGuard, IVault {
         return _usdAmount.mul(10 ** decimals).div(_price);
     }
 
+    /**
+     * @dev IMPORTANT: The hasRealisedProfit boolean (6th return value) returns true when position.realisedPnl >= 0.
+     *      For newly opened positions where realisedPnl is 0, hasRealisedProfit will be true,
+     *      which may be misleading for systems relying on this function.
+     */
     function getPosition(address _account, address _collateralToken, address _indexToken, bool _isLong)
         public
         view
@@ -1172,6 +1212,12 @@ contract Vault is ReentrancyGuard, IVault {
         if (supply == 0) return 0;
         uint256 weight = tokenWeights[_token];
         return weight.mul(supply).div(totalTokenWeights);
+    }
+
+    function _requestForGov(address _gov, uint256 _deadline) internal {
+        govProposals[_gov] = GovProposal(_deadline, true);
+
+        emit GovernanceTransferRequested(_gov, _deadline);
     }
 
     function _reduceCollateral(

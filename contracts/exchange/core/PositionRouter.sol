@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.6.0;
+pragma solidity 0.6.12;
 
 import "./interfaces/IRouter.sol";
 import "./interfaces/IVault.sol";

@@ -13,6 +13,11 @@ pragma solidity 0.6.12;
 contract VaultPriceFeed is IVaultPriceFeed {
     using SafeMath for uint256;
 
+    struct GovProposal {
+        uint256 deadline;
+        bool isActive;
+    }
+
     uint256 public constant PRICE_PRECISION = 10 ** 30;
     uint256 public constant ONE_USD = PRICE_PRECISION;
     uint256 public constant BASIS_POINTS_DIVISOR = 10000;
@@ -25,6 +30,7 @@ contract VaultPriceFeed is IVaultPriceFeed {
         address(bytes20(bytes32(uint256(keccak256("chainlink.flags.arbitrum-seq-offline")) - 1)));
 
     address public gov;
+    mapping(address => GovProposal) public govProposals;
     address public chainlinkFlags;
 
     bool public isAmmEnabled = true;
@@ -62,12 +68,40 @@ contract VaultPriceFeed is IVaultPriceFeed {
         _;
     }
 
+    event GovernanceTransferRequested(address indexed newGov, uint256 deadline);
+    event GovernanceTransferred(address indexed oldGov, address indexed newGov);
+
     constructor() public {
         gov = msg.sender;
     }
 
     function setGov(address _gov) external onlyGov {
-        gov = _gov;
+        require(_gov != address(0), "VaultPriceFeed: invalid address");
+        require(_gov != gov, "VaultPriceFeed: same governance");
+        _requestForGov(_gov, type(uint256).max);
+    }
+
+    function setGovWithDeadline(address _gov, uint256 _deadline) external onlyGov {
+        require(_gov != address(0), "VaultPriceFeed: invalid address");
+        require(_gov != gov, "VaultPriceFeed: same governance");
+        _requestForGov(_gov, _deadline);
+    }
+
+    function acceptGov() external {
+        GovProposal storage proposal = govProposals[msg.sender];
+        require(proposal.deadline > block.timestamp, "VaultPriceFeed: deadline expired");
+        require(proposal.isActive == true, "VaultPriceFeed: proposal is not active");
+
+        address oldGov = gov;
+        delete govProposals[msg.sender];
+        gov = msg.sender;
+
+        emit GovernanceTransferred(oldGov, msg.sender);
+    }
+
+    function cancelGovProposal(address _gov) external onlyGov {
+        require(govProposals[_gov].isActive, "VaultPriceFeed: proposal not active");
+        delete govProposals[_gov];
     }
 
     function setChainlinkFlags(address _chainlinkFlags) external onlyGov {
@@ -396,5 +430,11 @@ contract VaultPriceFeed is IVaultPriceFeed {
         }
         if (reserve1 == 0) return 0;
         return reserve0.mul(PRICE_PRECISION).div(reserve1);
+    }
+
+    function _requestForGov(address _gov, uint256 _deadline) internal {
+        govProposals[_gov] = GovProposal(_deadline, true);
+
+        emit GovernanceTransferRequested(_gov, _deadline);
     }
 }

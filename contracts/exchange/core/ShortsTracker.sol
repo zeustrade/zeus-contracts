@@ -15,7 +15,7 @@ contract ShortsTracker is Governable, IShortsTracker {
 
     uint256 public constant MAX_INT256 = uint256(type(int256).max);
 
-    IVault public vault;
+    IVault public immutable vault;
 
     mapping(address => bool) public isHandler;
     mapping(bytes32 => bytes32) public data;

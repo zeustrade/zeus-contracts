@@ -73,10 +73,10 @@ contract DeployAll is TestBase {
         usdg.addVault(address(zlpManager));
         vault.setManager(address(zlpManager), true);
 
-        vault.setGov(admin);
-        vaultPriceFeed.setGov(admin);
-        zlpManager.setGov(admin);
-        shortsTracker.setGov(admin);
+        // vault.setGov(admin);
+        // vaultPriceFeed.setGov(admin);
+        // zlpManager.setGov(admin);
+        // shortsTracker.setGov(admin);
 
         collateralToken = new Token();
         collateralToken.mint(user, INITIAL_USER_BALANCE);
@@ -85,7 +85,7 @@ contract DeployAll is TestBase {
 
         fastPriceFeed = new FastPriceFeed(30 minutes, 2 hours, 0, 50, address(0), address(admin), address(0));
 
-        fastPriceFeed.setGov(admin);
+        // fastPriceFeed.setGov(admin);
 
         address[] memory signers = new address[](1);
         signers[0] = admin;

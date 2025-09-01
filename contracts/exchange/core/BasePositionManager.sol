@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.6.0;
+pragma solidity 0.6.12;
 
 import "../libraries/math/SafeMath.sol";
 import "../libraries/token/IERC20.sol";
@@ -12,7 +12,6 @@ import "../libraries/utils/ReentrancyGuard.sol";
 import "./interfaces/IRouter.sol";
 import "./interfaces/IVault.sol";
 import "./interfaces/IShortsTracker.sol";
-import "./interfaces/IOrderBook.sol";
 import "./interfaces/IBasePositionManager.sol";
 
 import "../access/Governable.sol";
@@ -30,10 +29,10 @@ contract BasePositionManager is IBasePositionManager, ReentrancyGuard, Governabl
 
     address public admin;
 
-    address public vault;
-    address public shortsTracker;
-    address public router;
-    address public weth;
+    address public immutable vault;
+    address public immutable shortsTracker;
+    address public immutable router;
+    address public immutable weth;
 
     uint256 public ethTransferGasLimit = 500 * 1000;
 
