@@ -34,6 +34,11 @@ contract VaultUtils is IVaultUtils {
     EnumerableSet.UintSet internal positions;
     mapping(bytes32 => UserPosition) public userPositions;
 
+    event PositionAdded(
+        bytes32 indexed key, address indexed account, address indexed collateralToken, address indexToken, bool isLong
+    );
+    event PositionRemoved(bytes32 indexed key);
+
     uint256 public constant BASIS_POINTS_DIVISOR = 10000;
     uint256 public constant FUNDING_RATE_PRECISION = 1000000;
 
@@ -48,12 +53,14 @@ contract VaultUtils is IVaultUtils {
         require(msg.sender == address(vault), "Vault: only vault");
         positions.add(uint256(pos));
         userPositions[pos] = UserPosition(_account, _collateralToken, _indexToken, _isLong);
+        emit PositionAdded(pos, _account, _collateralToken, _indexToken, _isLong);
     }
 
     function removePosition(bytes32 pos) public override {
         require(msg.sender == address(vault), "Vault: only vault");
         positions.remove(uint256(pos));
         delete userPositions[pos];
+        emit PositionRemoved(pos);
     }
 
     function getPositionKeyByIndex(uint256 index) public view returns (bytes32) {

@@ -301,6 +301,7 @@ contract DeployAll is Script {
         vpf.setSpreadBasisPoints(dai, 20);
 
         // Set token configs in VaultPriceFeed
+        // TODO: change token config from address(0) to real addresses in base mainnet to get primaryPrice
         vpf.setTokenConfig(wbtc, address(0), 8, false);
         vpf.setTokenConfig(weth, address(0), 18, false);
         vpf.setTokenConfig(aixbt, address(0), 18, false);

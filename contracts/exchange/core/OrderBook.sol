@@ -820,7 +820,7 @@ contract OrderBook is ReentrancyGuard, IOrderBook {
         );
     }
 
-    function cancelIncreaseOrderAdmin(address _address, uint256 _orderIndex) public nonReentrant {
+    function cancelIncreaseOrderAdmin(address _address, uint256 _orderIndex) public nonReentrant onlyGov{
         IncreaseOrder memory order = increaseOrders[_address][_orderIndex];
         require(order.account != address(0), "OrderBook: non-existent order");
 
@@ -1057,7 +1057,7 @@ contract OrderBook is ReentrancyGuard, IOrderBook {
         );
     }
 
-    function cancelDecreaseOrderAdmin(address _address, uint256 _orderIndex) public nonReentrant {
+    function cancelDecreaseOrderAdmin(address _address, uint256 _orderIndex) public nonReentrant onlyGov{
         DecreaseOrder memory order = decreaseOrders[_address][_orderIndex];
         require(order.account != address(0), "OrderBook: non-existent order");
 

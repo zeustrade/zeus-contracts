@@ -651,27 +651,12 @@ contract PositionRouter is BasePositionManager, IPositionRouter {
         internal
         view
         returns (bool)
-    {
+    {   
+
         if (_positionBlockTime.add(maxTimeDelay) <= block.timestamp) {
             revert("expired");
         }
 
-        return _validateExecutionOrCancellation(_positionBlockNumber, _positionBlockTime, _account);
-    }
-
-    function _validateCancellation(uint256 _positionBlockNumber, uint256 _positionBlockTime, address _account)
-        internal
-        view
-        returns (bool)
-    {
-        return _validateExecutionOrCancellation(_positionBlockNumber, _positionBlockTime, _account);
-    }
-
-    function _validateExecutionOrCancellation(
-        uint256 _positionBlockNumber,
-        uint256 _positionBlockTime,
-        address _account
-    ) internal view returns (bool) {
         bool isKeeperCall = msg.sender == address(this) || isPositionKeeper[msg.sender];
 
         if (!isLeverageEnabled && !isKeeperCall) {
@@ -683,11 +668,50 @@ contract PositionRouter is BasePositionManager, IPositionRouter {
         }
 
         require(msg.sender == _account, "403");
-
         require(_positionBlockTime.add(minTimeDelayPublic) <= block.timestamp, "delay");
 
         return true;
     }
+
+    function _validateCancellation(uint256 _positionBlockNumber, uint256 _positionBlockTime, address _account)
+        internal
+        view
+        returns (bool)
+    {   
+
+        bool isKeeperCall = msg.sender == address(this) || isPositionKeeper[msg.sender];
+
+        if (isKeeperCall) {
+            return _positionBlockNumber.add(minBlockDelayKeeper) <= block.number;
+        }
+
+        require(msg.sender == _account, "403");
+        require(_positionBlockTime.add(minTimeDelayPublic) <= block.timestamp, "delay");
+
+        return true;
+    }
+
+    // function _validateExecutionOrCancellation(
+    //     uint256 _positionBlockNumber,
+    //     uint256 _positionBlockTime,
+    //     address _account
+    // ) internal view returns (bool) {
+    //     bool isKeeperCall = msg.sender == address(this) || isPositionKeeper[msg.sender];
+
+    //     if (!isLeverageEnabled && !isKeeperCall) {
+    //         revert("403");
+    //     }
+
+    //     if (isKeeperCall) {
+    //         return _positionBlockNumber.add(minBlockDelayKeeper) <= block.number;
+    //     }
+
+    //     require(msg.sender == _account, "403");
+
+    //     require(_positionBlockTime.add(minTimeDelayPublic) <= block.timestamp, "delay");
+
+    //     return true;
+    // }
 
     function _createIncreasePosition(
         address _account,

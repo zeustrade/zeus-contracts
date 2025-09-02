@@ -35,6 +35,92 @@ contract Router is IRouter {
     event Swap(address account, address tokenIn, address tokenOut, uint256 amountIn, uint256 amountOut);
     event GovernanceTransferRequested(address indexed newGov, uint256 deadline);
     event GovernanceTransferred(address indexed oldGov, address indexed newGov);
+    event PluginAdded(address indexed plugin);
+    event PluginRemoved(address indexed plugin);
+    event PluginApproved(address indexed account, address indexed plugin);
+    event PluginDenied(address indexed account, address indexed plugin);
+    event PluginTransfer(
+        address indexed plugin, address indexed token, address indexed account, address receiver, uint256 amount
+    );
+    event PluginIncreasePosition(
+        address indexed plugin,
+        address indexed account,
+        address indexed collateralToken,
+        address indexToken,
+        uint256 sizeDelta,
+        bool isLong
+    );
+    event PluginDecreasePosition(
+        address indexed plugin,
+        address indexed account,
+        address indexed collateralToken,
+        address indexToken,
+        uint256 collateralDelta,
+        uint256 sizeDelta,
+        bool isLong,
+        address receiver
+    );
+    event DirectPoolDepositCalled(address indexed token, address indexed sender, uint256 amount);
+    event IncreasePositionCalled(
+        address indexed sender,
+        address indexed collateralToken,
+        address indexed indexToken,
+        uint256 amountIn,
+        uint256 sizeDelta,
+        bool isLong,
+        uint256 price
+    );
+    event IncreasePositionETHCalled(
+        address indexed sender,
+        address indexed collateralToken,
+        address indexed indexToken,
+        uint256 msgValue,
+        uint256 sizeDelta,
+        bool isLong,
+        uint256 price
+    );
+    event DecreasePositionCalled(
+        address indexed sender,
+        address indexed collateralToken,
+        address indexed indexToken,
+        uint256 collateralDelta,
+        uint256 sizeDelta,
+        bool isLong,
+        address receiver,
+        uint256 price
+    );
+    event DecreasePositionETHCalled(
+        address indexed sender,
+        address indexed collateralToken,
+        address indexed indexToken,
+        uint256 collateralDelta,
+        uint256 sizeDelta,
+        bool isLong,
+        address receiver,
+        uint256 price
+    );
+    event DecreasePositionAndSwapCalled(
+        address indexed sender,
+        address indexed collateralToken,
+        address indexed indexToken,
+        uint256 collateralDelta,
+        uint256 sizeDelta,
+        bool isLong,
+        address receiver,
+        uint256 price,
+        uint256 minOut
+    );
+    event DecreasePositionAndSwapETHCalled(
+        address indexed sender,
+        address indexed collateralToken,
+        address indexed indexToken,
+        uint256 collateralDelta,
+        uint256 sizeDelta,
+        bool isLong,
+        address receiver,
+        uint256 price,
+        uint256 minOut
+    );
 
     modifier onlyGov() {
         require(msg.sender == gov, "Router: forbidden");
@@ -84,23 +170,28 @@ contract Router is IRouter {
 
     function addPlugin(address _plugin) external override onlyGov {
         plugins[_plugin] = true;
+        emit PluginAdded(_plugin);
     }
 
     function removePlugin(address _plugin) external onlyGov {
         plugins[_plugin] = false;
+        emit PluginRemoved(_plugin);
     }
 
     function approvePlugin(address _plugin) external {
         approvedPlugins[msg.sender][_plugin] = true;
+        emit PluginApproved(msg.sender, _plugin);
     }
 
     function denyPlugin(address _plugin) external {
         approvedPlugins[msg.sender][_plugin] = false;
+        emit PluginDenied(msg.sender, _plugin);
     }
 
     function pluginTransfer(address _token, address _account, address _receiver, uint256 _amount) external override {
         _validatePlugin(_account);
         IERC20(_token).safeTransferFrom(_account, _receiver, _amount);
+        emit PluginTransfer(msg.sender, _token, _account, _receiver, _amount);
     }
 
     function pluginIncreasePosition(
@@ -112,6 +203,7 @@ contract Router is IRouter {
     ) external override {
         _validatePlugin(_account);
         IVault(vault).increasePosition(_account, _collateralToken, _indexToken, _sizeDelta, _isLong);
+        emit PluginIncreasePosition(msg.sender, _account, _collateralToken, _indexToken, _sizeDelta, _isLong);
     }
 
     function pluginDecreasePosition(
@@ -124,14 +216,19 @@ contract Router is IRouter {
         address _receiver
     ) external override returns (uint256) {
         _validatePlugin(_account);
-        return IVault(vault).decreasePosition(
+        uint256 amountOut = IVault(vault).decreasePosition(
             _account, _collateralToken, _indexToken, _collateralDelta, _sizeDelta, _isLong, _receiver
         );
+        emit PluginDecreasePosition(
+            msg.sender, _account, _collateralToken, _indexToken, _collateralDelta, _sizeDelta, _isLong, _receiver
+        );
+        return amountOut;
     }
 
     function directPoolDeposit(address _token, uint256 _amount) external {
         IERC20(_token).safeTransferFrom(_sender(), vault, _amount);
         IVault(vault).directPoolDeposit(_token);
+        emit DirectPoolDepositCalled(_token, msg.sender, _amount);
     }
 
     function swap(address[] memory _path, uint256 _amountIn, uint256 _minOut, address _receiver) public override {
@@ -174,6 +271,9 @@ contract Router is IRouter {
             IERC20(_path[_path.length - 1]).safeTransfer(vault, amountOut);
         }
         _increasePosition(_path[_path.length - 1], _indexToken, _sizeDelta, _isLong, _price);
+        emit IncreasePositionCalled(
+            msg.sender, _path[_path.length - 1], _indexToken, _amountIn, _sizeDelta, _isLong, _price
+        );
     }
 
     function increasePositionETH(
@@ -193,6 +293,9 @@ contract Router is IRouter {
             IERC20(_path[_path.length - 1]).safeTransfer(vault, amountOut);
         }
         _increasePosition(_path[_path.length - 1], _indexToken, _sizeDelta, _isLong, _price);
+        emit IncreasePositionETHCalled(
+            msg.sender, _path[_path.length - 1], _indexToken, msg.value, _sizeDelta, _isLong, _price
+        );
     }
 
     function decreasePosition(
@@ -205,6 +308,9 @@ contract Router is IRouter {
         uint256 _price
     ) external {
         _decreasePosition(_collateralToken, _indexToken, _collateralDelta, _sizeDelta, _isLong, _receiver, _price);
+        emit DecreasePositionCalled(
+            msg.sender, _collateralToken, _indexToken, _collateralDelta, _sizeDelta, _isLong, _receiver, _price
+        );
     }
 
     function decreasePositionETH(
@@ -220,6 +326,9 @@ contract Router is IRouter {
             _collateralToken, _indexToken, _collateralDelta, _sizeDelta, _isLong, address(this), _price
         );
         _transferOutETH(amountOut, _receiver);
+        emit DecreasePositionETHCalled(
+            msg.sender, _collateralToken, _indexToken, _collateralDelta, _sizeDelta, _isLong, _receiver, _price
+        );
     }
 
     function decreasePositionAndSwap(
@@ -236,6 +345,9 @@ contract Router is IRouter {
             _decreasePosition(_path[0], _indexToken, _collateralDelta, _sizeDelta, _isLong, address(this), _price);
         IERC20(_path[0]).safeTransfer(vault, amount);
         _swap(_path, _minOut, _receiver);
+        emit DecreasePositionAndSwapCalled(
+            msg.sender, _path[0], _indexToken, _collateralDelta, _sizeDelta, _isLong, _receiver, _price, _minOut
+        );
     }
 
     function decreasePositionAndSwapETH(
@@ -254,6 +366,9 @@ contract Router is IRouter {
         IERC20(_path[0]).safeTransfer(vault, amount);
         uint256 amountOut = _swap(_path, _minOut, address(this));
         _transferOutETH(amountOut, _receiver);
+        emit DecreasePositionAndSwapETHCalled(
+            msg.sender, _path[0], _indexToken, _collateralDelta, _sizeDelta, _isLong, _receiver, _price, _minOut
+        );
     }
 
     function _requestForGov(address _gov, uint256 _deadline) internal {

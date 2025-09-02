@@ -216,6 +216,47 @@ contract Vault is ReentrancyGuard, IVault {
     event DecreaseGuaranteedUsd(address token, uint256 amount);
     event GovernanceTransferRequested(address indexed newGov, uint256 deadline);
     event GovernanceTransferred(address indexed oldGov, address indexed newGov);
+    event VaultUtilsSet(address vaultUtils);
+    event ErrorControllerSet(address errorController);
+    event ErrorSet(uint256 indexed errorCode, string error);
+    event InManagerModeSet(bool inManagerMode);
+    event ManagerSet(address indexed manager, bool isManager);
+    event InPrivateLiquidationModeSet(bool inPrivateLiquidationMode);
+    event LiquidatorSet(address indexed liquidator, bool isActive);
+    event IsSwapEnabledSet(bool isSwapEnabled);
+    event IsLeverageEnabledSet(bool isLeverageEnabled);
+    event MaxGasPriceSet(uint256 maxGasPrice);
+    event PriceFeedSet(address priceFeed);
+    event MaxLeverageSet(uint256 maxLeverage);
+    event BufferAmountSet(address indexed token, uint256 amount);
+    event MaxGlobalShortSizeSet(address indexed token, uint256 amount);
+    event FeesSet(
+        uint256 taxBasisPoints,
+        uint256 stableTaxBasisPoints,
+        uint256 mintBurnFeeBasisPoints,
+        uint256 swapFeeBasisPoints,
+        uint256 stableSwapFeeBasisPoints,
+        uint256 marginFeeBasisPoints,
+        uint256 liquidationFeeUsd,
+        uint256 minProfitTime,
+        bool hasDynamicFees
+    );
+    event FundingRateSet(uint256 fundingInterval, uint256 fundingRateFactor, uint256 stableFundingRateFactor);
+    event TokenConfigSet(
+        address indexed token,
+        uint256 tokenDecimals,
+        uint256 tokenWeight,
+        uint256 minProfitBps,
+        uint256 maxUsdgAmount,
+        bool isStable,
+        bool isShortable
+    );
+    event TokenConfigCleared(address indexed token);
+    event FeesWithdrawn(address indexed token, address indexed receiver, uint256 amount);
+    event RouterAdded(address indexed account, address indexed router);
+    event RouterRemoved(address indexed account, address indexed router);
+    event UsdgAmountSet(address indexed token, uint256 amount);
+    event VaultUpgraded(address indexed newVault, address indexed token, uint256 amount);
 
     function initialize2(
         address _router,
@@ -261,16 +302,19 @@ contract Vault is ReentrancyGuard, IVault {
     function setVaultUtils(IVaultUtils _vaultUtils) external override {
         _onlyGov();
         vaultUtils = _vaultUtils;
+        emit VaultUtilsSet(address(_vaultUtils));
     }
 
     function setErrorController(address _errorController) external {
         _onlyGov();
         errorController = _errorController;
+        emit ErrorControllerSet(_errorController);
     }
 
     function setError(uint256 _errorCode, string calldata _error) external override {
         require(msg.sender == errorController, "Vault: invalid errorController");
         errors[_errorCode] = _error;
+        emit ErrorSet(_errorCode, _error);
     }
 
     function allWhitelistedTokensLength() external view override returns (uint256) {
@@ -280,36 +324,43 @@ contract Vault is ReentrancyGuard, IVault {
     function setInManagerMode(bool _inManagerMode) external override {
         _onlyGov();
         inManagerMode = _inManagerMode;
+        emit InManagerModeSet(_inManagerMode);
     }
 
     function setManager(address _manager, bool _isManager) external override {
         _onlyGov();
         isManager[_manager] = _isManager;
+        emit ManagerSet(_manager, _isManager);
     }
 
     function setInPrivateLiquidationMode(bool _inPrivateLiquidationMode) external override {
         _onlyGov();
         inPrivateLiquidationMode = _inPrivateLiquidationMode;
+        emit InPrivateLiquidationModeSet(_inPrivateLiquidationMode);
     }
 
     function setLiquidator(address _liquidator, bool _isActive) external override {
         _onlyGov();
         isLiquidator[_liquidator] = _isActive;
+        emit LiquidatorSet(_liquidator, _isActive);
     }
 
     function setIsSwapEnabled(bool _isSwapEnabled) external override {
         _onlyGov();
         isSwapEnabled = _isSwapEnabled;
+        emit IsSwapEnabledSet(_isSwapEnabled);
     }
 
     function setIsLeverageEnabled(bool _isLeverageEnabled) external override {
         _onlyGov();
         isLeverageEnabled = _isLeverageEnabled;
+        emit IsLeverageEnabledSet(_isLeverageEnabled);
     }
 
     function setMaxGasPrice(uint256 _maxGasPrice) external override {
         _onlyGov();
         maxGasPrice = _maxGasPrice;
+        emit MaxGasPriceSet(_maxGasPrice);
     }
 
     function setGov(address _gov) external {
@@ -347,22 +398,26 @@ contract Vault is ReentrancyGuard, IVault {
     function setPriceFeed(address _priceFeed) external override {
         _onlyGov();
         priceFeed = _priceFeed;
+        emit PriceFeedSet(_priceFeed);
     }
 
     function setMaxLeverage(uint256 _maxLeverage) external override {
         _onlyGov();
         _validate(_maxLeverage > MIN_LEVERAGE, 2);
         maxLeverage = _maxLeverage;
+        emit MaxLeverageSet(_maxLeverage);
     }
 
     function setBufferAmount(address _token, uint256 _amount) external override {
         _onlyGov();
         bufferAmounts[_token] = _amount;
+        emit BufferAmountSet(_token, _amount);
     }
 
     function setMaxGlobalShortSize(address _token, uint256 _amount) external override {
         _onlyGov();
         maxGlobalShortSizes[_token] = _amount;
+        emit MaxGlobalShortSizeSet(_token, _amount);
     }
 
     function setFees(
@@ -377,13 +432,13 @@ contract Vault is ReentrancyGuard, IVault {
         bool _hasDynamicFees
     ) external override {
         _onlyGov();
-        // _validate(_taxBasisPoints <= MAX_FEE_BASIS_POINTS, 3);
-        // _validate(_stableTaxBasisPoints <= MAX_FEE_BASIS_POINTS, 4);
-        // _validate(_mintBurnFeeBasisPoints <= MAX_FEE_BASIS_POINTS, 5);
-        // _validate(_swapFeeBasisPoints <= MAX_FEE_BASIS_POINTS, 6);
-        // _validate(_stableSwapFeeBasisPoints <= MAX_FEE_BASIS_POINTS, 7);
-        // _validate(_marginFeeBasisPoints <= MAX_FEE_BASIS_POINTS, 8);
-        // _validate(_liquidationFeeUsd <= MAX_LIQUIDATION_FEE_USD, 9);
+        _validate(_taxBasisPoints <= MAX_FEE_BASIS_POINTS, 3);
+        _validate(_stableTaxBasisPoints <= MAX_FEE_BASIS_POINTS, 4);
+        _validate(_mintBurnFeeBasisPoints <= MAX_FEE_BASIS_POINTS, 5);
+        _validate(_swapFeeBasisPoints <= MAX_FEE_BASIS_POINTS, 6);
+        _validate(_stableSwapFeeBasisPoints <= MAX_FEE_BASIS_POINTS, 7);
+        _validate(_marginFeeBasisPoints <= MAX_FEE_BASIS_POINTS, 8);
+        _validate(_liquidationFeeUsd <= MAX_LIQUIDATION_FEE_USD, 9);
         taxBasisPoints = _taxBasisPoints;
         stableTaxBasisPoints = _stableTaxBasisPoints;
         mintBurnFeeBasisPoints = _mintBurnFeeBasisPoints;
@@ -393,6 +448,17 @@ contract Vault is ReentrancyGuard, IVault {
         liquidationFeeUsd = _liquidationFeeUsd;
         minProfitTime = _minProfitTime;
         hasDynamicFees = _hasDynamicFees;
+        emit FeesSet(
+            _taxBasisPoints,
+            _stableTaxBasisPoints,
+            _mintBurnFeeBasisPoints,
+            _swapFeeBasisPoints,
+            _stableSwapFeeBasisPoints,
+            _marginFeeBasisPoints,
+            _liquidationFeeUsd,
+            _minProfitTime,
+            _hasDynamicFees
+        );
     }
 
     function setFundingRate(uint256 _fundingInterval, uint256 _fundingRateFactor, uint256 _stableFundingRateFactor)
@@ -406,6 +472,7 @@ contract Vault is ReentrancyGuard, IVault {
         fundingInterval = _fundingInterval;
         fundingRateFactor = _fundingRateFactor;
         stableFundingRateFactor = _stableFundingRateFactor;
+        emit FundingRateSet(_fundingInterval, _fundingRateFactor, _stableFundingRateFactor);
     }
 
     function setTokenConfig(
@@ -439,6 +506,9 @@ contract Vault is ReentrancyGuard, IVault {
 
         // validate price feed
         getMaxPrice(_token);
+        emit TokenConfigSet(
+            _token, _tokenDecimals, _tokenWeight, _minProfitBps, _maxUsdgAmount, _isStable, _isShortable
+        );
     }
 
     function clearTokenConfig(address _token) external {
@@ -453,6 +523,7 @@ contract Vault is ReentrancyGuard, IVault {
         delete stableTokens[_token];
         delete shortableTokens[_token];
         whitelistedTokenCount = whitelistedTokenCount.sub(1);
+        emit TokenConfigCleared(_token);
     }
 
     function withdrawFees(address _token, address _receiver) external override returns (uint256) {
@@ -461,15 +532,18 @@ contract Vault is ReentrancyGuard, IVault {
         if (amount == 0) return 0;
         feeReserves[_token] = 0;
         _transferOut(_token, amount, _receiver);
+        emit FeesWithdrawn(_token, _receiver, amount);
         return amount;
     }
 
     function addRouter(address _router) external {
         approvedRouters[msg.sender][_router] = true;
+        emit RouterAdded(msg.sender, _router);
     }
 
     function removeRouter(address _router) external {
         approvedRouters[msg.sender][_router] = false;
+        emit RouterRemoved(msg.sender, _router);
     }
 
     function setUsdgAmount(address _token, uint256 _amount) external override {
@@ -478,16 +552,19 @@ contract Vault is ReentrancyGuard, IVault {
         uint256 usdgAmount = usdgAmounts[_token];
         if (_amount > usdgAmount) {
             _increaseUsdgAmount(_token, _amount.sub(usdgAmount));
+            emit UsdgAmountSet(_token, _amount);
             return;
         }
 
         _decreaseUsdgAmount(_token, usdgAmount.sub(_amount));
+        emit UsdgAmountSet(_token, _amount);
     }
 
     // the governance controlling this function should have a timelock
     function upgradeVault(address _newVault, address _token, uint256 _amount) external {
         _onlyGov();
         IERC20(_token).safeTransfer(_newVault, _amount);
+        emit VaultUpgraded(_newVault, _token, _amount);
     }
 
     // deposit into the pool without minting USDG tokens
