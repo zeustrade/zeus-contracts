@@ -140,9 +140,9 @@ contract DeployAll is Script {
         vaultUtils = new VaultUtils(vault);
         vaultReader = new VaultReader();
         shortsTracker = new ShortsTracker(address(vault));
-        zlp = new ZLP();
+        zlp = new ZLP(0);
         usdg = new USDG(address(vault));
-        zlpManager = new ZlpManager(address(vault), address(usdg), address(zlp), address(shortsTracker), 0);
+        zlpManager = new ZlpManager(address(vault), address(usdg), address(zlp), address(shortsTracker));
         router = new Router(address(vault), address(usdg), weth);
         orderBook = new OrderBook();
         referralStorage = new ReferralStorage();
@@ -179,20 +179,6 @@ contract DeployAll is Script {
         // --- Peripherals ---
         tokenManager = new TokenManager(1);
         reader = new Reader();
-        timelock = new Timelock(
-            deployer,
-            1,
-            address(tokenManager),
-            address(tokenManager),
-            address(zlpManager),
-            address(zlpManager),
-            13250000000000000000000000,
-            10,
-            40
-        );
-        console2.log("TokenManager:", address(tokenManager));
-        console2.log("Reader:", address(reader));
-        console2.log("Timelock:", address(timelock));
 
         stakedZusTracker = new RewardTracker("Staked ZUS", "sZUS");
         stakedZusDistributor = new RewardDistributor(zus, address(stakedZusTracker));
@@ -229,6 +215,29 @@ contract DeployAll is Script {
             address(stakedZlpTracker),
             address(zlpManager)
         );
+
+        timelock = new Timelock(
+            deployer,
+            1,
+            address(tokenManager),
+            address(tokenManager),
+            address(zlpManager),
+            address(zlp),
+            address(rewardRouter),
+            13250000000000000000000000,
+            10,
+            40
+        );
+        console2.log("TokenManager:", address(tokenManager));
+        console2.log("Reader:", address(reader));
+        console2.log("Timelock:", address(timelock));
+        console2.log("StakedZusTracker:", address(stakedZusTracker));
+        console2.log("StakedZusDistributor:", address(stakedZusDistributor));
+        console2.log("FeeZlpTracker:", address(feeZlpTracker));
+        console2.log("FeeZlpDistributor:", address(feeZlpDistributor));
+        console2.log("StakedZlpTracker:", address(stakedZlpTracker));
+        console2.log("StakedZlpDistributor:", address(stakedZlpDistributor));
+        console2.log("RewardRouter:", address(rewardRouter));
 
         // --- Initial configuration phase ---
         zlp.setMinter(address(zlpManager), true);

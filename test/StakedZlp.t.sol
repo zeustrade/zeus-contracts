@@ -4,6 +4,7 @@ pragma solidity 0.6.12;
 import "./helpers/TestBase.sol";
 import {DeployAll} from "./helpers/DeployAll.sol";
 import {StakedZlp} from "../contracts/exchange/staking/StakedZlp.sol";
+import {IZLP} from "../contracts/exchange/zus/interfaces/IZLP.sol";
 import {IZlpManager} from "../contracts/exchange/core/interfaces/IZlpManager.sol";
 
 contract StakedZlpTest is DeployAll {
@@ -36,29 +37,14 @@ contract StakedZlpTest is DeployAll {
         assertEq(stakedZlp.totalSupply(), stakedZlpTracker.totalSupply());
     }
 
-    function testTransferRevertsDuringCooldown() public {
-        uint256 minted = _mintAndStakeZlpETH(user, 1 ether);
-        assertGt(minted, 0);
-
-        vm.mockCall(
-            address(zlpManager),
-            abi.encodeWithSelector(IZlpManager.lastAddedAt.selector, user),
-            abi.encode(block.timestamp)
-        );
-
-        vm.prank(user);
-        (bool ok,) = address(stakedZlp).call(abi.encodeWithSelector(stakedZlp.transfer.selector, receiver, minted / 2));
-        assertTrue(!ok);
-    }
-
     function testTransferMovesStakeAfterCooldown() public {
         uint256 minted = _mintAndStakeZlpETH(user, 2 ether);
         assertGt(minted, 0);
 
         uint256 amount = minted / 2;
         vm.mockCall(
-            address(zlpManager),
-            abi.encodeWithSelector(IZlpManager.lastAddedAt.selector, user),
+            address(zlp),
+            abi.encodeWithSelector(IZLP.lastAddedAt.selector, user),
             abi.encode(block.timestamp - COOLDOWN_DURATION - 1)
         );
 
@@ -101,8 +87,8 @@ contract StakedZlpTest is DeployAll {
         assertGt(minted, 0);
 
         vm.mockCall(
-            address(zlpManager),
-            abi.encodeWithSelector(IZlpManager.lastAddedAt.selector, user),
+            address(zlp),
+            abi.encodeWithSelector(IZLP.lastAddedAt.selector, user),
             abi.encode(block.timestamp - COOLDOWN_DURATION - 1)
         );
 

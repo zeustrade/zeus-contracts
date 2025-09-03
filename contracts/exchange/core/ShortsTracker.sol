@@ -2,11 +2,11 @@
 
 pragma solidity 0.6.12;
 
-import '../libraries/math/SafeMath.sol';
+import "../libraries/math/SafeMath.sol";
 
-import '../access/Governable.sol';
-import './interfaces/IShortsTracker.sol';
-import './interfaces/IVault.sol';
+import "../access/Governable.sol";
+import "./interfaces/IShortsTracker.sol";
+import "./interfaces/IVault.sol";
 
 contract ShortsTracker is Governable, IShortsTracker {
     using SafeMath for uint256;
@@ -25,7 +25,7 @@ contract ShortsTracker is Governable, IShortsTracker {
     bool public override isGlobalShortDataReady;
 
     modifier onlyHandler() {
-        require(isHandler[msg.sender], 'ShortsTracker: forbidden');
+        require(isHandler[msg.sender], "ShortsTracker: forbidden");
         _;
     }
 
@@ -34,7 +34,7 @@ contract ShortsTracker is Governable, IShortsTracker {
     }
 
     function setHandler(address _handler, bool _isActive) external onlyGov {
-        require(_handler != address(0), 'ShortsTracker: invalid _handler');
+        require(_handler != address(0), "ShortsTracker: invalid _handler");
         isHandler[_handler] = _isActive;
     }
 
@@ -63,14 +63,8 @@ contract ShortsTracker is Governable, IShortsTracker {
             return;
         }
 
-        (uint256 globalShortSize, uint256 globalShortAveragePrice) = getNextGlobalShortData(
-            _account,
-            _collateralToken,
-            _indexToken,
-            _markPrice,
-            _sizeDelta,
-            _isIncrease
-        );
+        (uint256 globalShortSize, uint256 globalShortAveragePrice) =
+            getNextGlobalShortData(_account, _collateralToken, _indexToken, _markPrice, _sizeDelta, _isIncrease);
         _setGlobalShortAveragePrice(_indexToken, globalShortAveragePrice);
 
         emit GlobalShortDataUpdated(_indexToken, globalShortSize, globalShortAveragePrice);
@@ -90,7 +84,7 @@ contract ShortsTracker is Governable, IShortsTracker {
     }
 
     function setInitData(address[] calldata _tokens, uint256[] calldata _averagePrices) external override onlyGov {
-        require(!isGlobalShortDataReady, 'ShortsTracker: already migrated');
+        require(!isGlobalShortDataReady, "ShortsTracker: already migrated");
 
         for (uint256 i = 0; i < _tokens.length; i++) {
             globalShortAveragePrices[_tokens[i]] = _averagePrices[i];
@@ -146,13 +140,13 @@ contract ShortsTracker is Governable, IShortsTracker {
         }
 
         IVault _vault = vault;
-        (uint256 size /*uint256 collateral*/, , uint256 averagePrice, , , , , uint256 lastIncreasedTime) = _vault
-            .getPosition(_account, _collateralToken, _indexToken, false);
+        (uint256 size, /*uint256 collateral*/, uint256 averagePrice,,,,, uint256 lastIncreasedTime) =
+            _vault.getPosition(_account, _collateralToken, _indexToken, false);
 
         (bool hasProfit, uint256 delta) = _vault.getDelta(_indexToken, size, averagePrice, false, lastIncreasedTime);
         // get the proportional change in pnl
         uint256 adjustedDelta = _sizeDelta.mul(delta).div(size);
-        require(adjustedDelta < MAX_INT256, 'ShortsTracker: overflow');
+        require(adjustedDelta < MAX_INT256, "ShortsTracker: overflow");
         return hasProfit ? int256(adjustedDelta) : -int256(adjustedDelta);
     }
 
@@ -165,19 +159,17 @@ contract ShortsTracker is Governable, IShortsTracker {
     ) public pure returns (uint256) {
         (bool hasProfit, uint256 nextDelta) = _getNextDelta(_delta, _averagePrice, _nextPrice, _realisedPnl);
 
-        uint256 nextAveragePrice = _nextPrice.mul(_nextSize).div(
-            hasProfit ? _nextSize.sub(nextDelta) : _nextSize.add(nextDelta)
-        );
+        uint256 nextAveragePrice =
+            _nextPrice.mul(_nextSize).div(hasProfit ? _nextSize.sub(nextDelta) : _nextSize.add(nextDelta));
 
         return nextAveragePrice;
     }
 
-    function _getNextDelta(
-        uint256 _delta,
-        uint256 _averagePrice,
-        uint256 _nextPrice,
-        int256 _realisedPnl
-    ) internal pure returns (bool, uint256) {
+    function _getNextDelta(uint256 _delta, uint256 _averagePrice, uint256 _nextPrice, int256 _realisedPnl)
+        internal
+        pure
+        returns (bool, uint256)
+    {
         // global delta 10000, realised pnl 1000 => new pnl 9000
         // global delta 10000, realised pnl -1000 => new pnl 11000
         // global delta -10000, realised pnl 1000 => new pnl -11000

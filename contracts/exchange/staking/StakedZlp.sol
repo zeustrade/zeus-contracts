@@ -7,6 +7,8 @@ import "../libraries/token/IERC20.sol";
 
 import "../core/interfaces/IZlpManager.sol";
 
+import "../zus/interfaces/IZLP.sol";
+
 import "./interfaces/IRewardTracker.sol";
 import "./interfaces/IRewardTracker.sol";
 
@@ -80,26 +82,21 @@ contract StakedZlp {
         require(_recipient != address(0), "StakedZlp: transfer to the zero address");
 
         require(
-            zlpManager.lastAddedAt(_sender).add(zlpManager.cooldownDuration()) <= block.timestamp,
+            IZLP(zlp).lastAddedAt(_sender).add(IZLP(zlp).cooldownDuration()) <= block.timestamp,
             "StakedZlp: cooldown duration not yet passed"
         );
 
-        // Mirror 0.8.30 flow to avoid user allowance issues:
-        // 1) Unstake to this contract
         IRewardTracker(stakedZlpTracker).unstakeForAccount(_sender, feeZlpTracker, _amount, address(this));
 
-        // 2) Move feeZlpTracker tokens and underlying ZLP to this contract
         IERC20(feeZlpTracker).transfer(_sender, _amount);
         IRewardTracker(feeZlpTracker).unstakeForAccount(_sender, zlp, _amount, address(this));
 
-        // 3) Approve and stake from this contract for the recipient
         IERC20(zlp).approve(feeZlpTracker, _amount);
         IRewardTracker(feeZlpTracker).stakeForAccount(address(this), _recipient, zlp, _amount);
 
         IERC20(feeZlpTracker).approve(stakedZlpTracker, _amount);
         IRewardTracker(stakedZlpTracker).stakeForAccount(address(this), _recipient, feeZlpTracker, _amount);
 
-        // 4) Transfer resulting stakedZlpTracker representation to recipient
         IERC20(stakedZlpTracker).transfer(_recipient, _amount);
     }
 }

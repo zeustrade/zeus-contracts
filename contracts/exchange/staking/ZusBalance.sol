@@ -5,6 +5,7 @@ pragma solidity 0.6.12;
 import "../libraries/math/SafeMath.sol";
 import "../libraries/token/IERC20.sol";
 import "../core/interfaces/IZlpManager.sol";
+import "../zus/interfaces/IZLP.sol";
 
 contract ZlpBalance {
     using SafeMath for uint256;
@@ -57,7 +58,8 @@ contract ZlpBalance {
         require(_recipient != address(0), "ZlpBalance: transfer to the zero address");
 
         require(
-            zlpManager.lastAddedAt(_sender).add(zlpManager.cooldownDuration()) <= block.timestamp,
+            IZLP(zlpManager.zlp()).lastAddedAt(_sender).add(IZLP(zlpManager.zlp()).cooldownDuration())
+                <= block.timestamp,
             "ZlpBalance: cooldown duration not yet passed"
         );
 

@@ -8,9 +8,9 @@ interface IZlpManager {
     function zlp() external view returns (address);
     function usdg() external view returns (address);
     function vault() external view returns (IVault);
-    function cooldownDuration() external returns (uint256);
+    // function cooldownDuration() external returns (uint256);
     function getAumInUsdg(bool maximise) external view returns (uint256);
-    function lastAddedAt(address _account) external returns (uint256);
+    // function lastAddedAt(address _account) external returns (uint256);
     function addLiquidity(address _token, uint256 _amount, uint256 _minUsdg, uint256 _minZlp)
         external
         returns (uint256);
@@ -33,5 +33,5 @@ interface IZlpManager {
         address _receiver
     ) external returns (uint256);
     function setShortsTrackerAveragePriceWeight(uint256 _shortsTrackerAveragePriceWeight) external;
-    function setCooldownDuration(uint256 _cooldownDuration) external;
+    // function setCooldownDuration(uint256 _cooldownDuration) external;
 }

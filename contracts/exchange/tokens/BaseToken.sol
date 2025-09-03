@@ -152,7 +152,7 @@ contract BaseToken is IERC20, IBaseToken {
         return true;
     }
 
-    function _mint(address _account, uint256 _amount) internal {
+    function _mint(address _account, uint256 _amount) internal virtual {
         require(_account != address(0), "BaseToken: mint to the zero address");
 
         _updateRewards(_account);
@@ -167,7 +167,7 @@ contract BaseToken is IERC20, IBaseToken {
         emit Transfer(address(0), _account, _amount);
     }
 
-    function _burn(address _account, uint256 _amount) internal {
+    function _burn(address _account, uint256 _amount) internal virtual {
         require(_account != address(0), "BaseToken: burn from the zero address");
 
         _updateRewards(_account);
@@ -182,7 +182,7 @@ contract BaseToken is IERC20, IBaseToken {
         emit Transfer(_account, address(0), _amount);
     }
 
-    function _transfer(address _sender, address _recipient, uint256 _amount) private {
+    function _transfer(address _sender, address _recipient, uint256 _amount) internal virtual {
         require(_sender != address(0), "BaseToken: transfer from the zero address");
         require(_recipient != address(0), "BaseToken: transfer to the zero address");
 

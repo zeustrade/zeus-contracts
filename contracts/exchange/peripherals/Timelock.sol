@@ -14,6 +14,7 @@ import "../tokens/interfaces/IYieldToken.sol";
 import "../tokens/interfaces/IBaseToken.sol";
 import "../tokens/interfaces/IMintable.sol";
 import "../tokens/interfaces/IUSDG.sol";
+import "../zus/interfaces/IZLP.sol";
 import "../staking/interfaces/IVester.sol";
 import "../staking/interfaces/IRewardRouterV2.sol";
 
@@ -34,6 +35,7 @@ contract Timelock is ITimelock {
     address public tokenManager;
     address public mintReceiver;
     address public zlpManager;
+    address public zlpToken;
     address public rewardRouter;
     uint256 public maxTokenSupply;
 
@@ -92,6 +94,7 @@ contract Timelock is ITimelock {
         address _tokenManager,
         address _mintReceiver,
         address _zlpManager,
+        address _zlpToken,
         address _rewardRouter,
         uint256 _maxTokenSupply,
         uint256 _marginFeeBasisPoints,
@@ -103,6 +106,7 @@ contract Timelock is ITimelock {
         tokenManager = _tokenManager;
         mintReceiver = _mintReceiver;
         zlpManager = _zlpManager;
+        zlpToken = _zlpToken;
         rewardRouter = _rewardRouter;
         maxTokenSupply = _maxTokenSupply;
 
@@ -338,7 +342,7 @@ contract Timelock is ITimelock {
 
     function setZlpCooldownDuration(uint256 _cooldownDuration) external onlyAdmin {
         require(_cooldownDuration < 2 hours, "Timelock: invalid _cooldownDuration");
-        IZlpManager(zlpManager).setCooldownDuration(_cooldownDuration);
+        IZLP(zlpToken).setCooldownDuration(_cooldownDuration);
     }
 
     function setMaxGlobalShortSize(address _vault, address _token, uint256 _amount) external onlyAdmin {

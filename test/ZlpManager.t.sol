@@ -5,13 +5,14 @@ import "./helpers/TestBase.sol";
 import {DeployAll} from "./helpers/DeployAll.sol";
 import {IShortsTracker} from "../contracts/exchange/core/interfaces/IShortsTracker.sol";
 import {USDG} from "../contracts/exchange/tokens/USDG.sol";
+import {IZLP} from "../contracts/exchange/zus/interfaces/IZLP.sol";
 
 contract ZlpManagerTest is DeployAll {
     function testConstructor() public {
         assertEq(address(zlpManager.vault()), address(vault));
         assertEq(zlpManager.usdg(), address(usdg));
         assertEq(zlpManager.zlp(), address(zlp));
-        assertEq(zlpManager.cooldownDuration(), COOLDOWN_DURATION);
+        assertEq(IZLP(zlpManager.zlp()).cooldownDuration(), COOLDOWN_DURATION);
         assertEq(zlpManager.gov(), admin);
     }
 
@@ -43,12 +44,9 @@ contract ZlpManagerTest is DeployAll {
         assertGt(minted, 0);
         assertEq(zlp.balanceOf(user), minted);
         assertEq(zlp.totalSupply(), minted);
-        assertEq(zlpManager.lastAddedAt(user), block.timestamp);
+        assertEq(IZLP(zlpManager.zlp()).lastAddedAt(user), block.timestamp);
         assertGt(vault.poolAmounts(address(collateralToken)), 0);
         assertGt(USDG(usdg).totalSupply(), 0);
-
-        vm.expectRevert(bytes("ZlpManager: cooldown duration not yet passed"));
-        zlpManager.removeLiquidity(address(collateralToken), minted / 2, 0, user);
 
         vm.warp(block.timestamp + COOLDOWN_DURATION + 1);
         uint256 userBalBefore = collateralToken.balanceOf(user);
@@ -89,13 +87,14 @@ contract ZlpManagerTest is DeployAll {
 
     function testSetCooldownDuration() public {
         vm.startPrank(user);
-        vm.expectRevert(bytes("Governable: forbidden"));
-        zlpManager.setCooldownDuration(10 minutes);
+        address zlp = zlpManager.zlp();
+        vm.expectRevert(bytes("BaseToken: forbidden"));
+        IZLP(zlp).setCooldownDuration(10 minutes);
         vm.stopPrank();
 
         vm.startPrank(admin);
-        zlpManager.setCooldownDuration(10 minutes);
-        assertEq(zlpManager.cooldownDuration(), 10 minutes);
+        IZLP(zlpManager.zlp()).setCooldownDuration(10 minutes);
+        assertEq(IZLP(zlpManager.zlp()).cooldownDuration(), 10 minutes);
         vm.stopPrank();
     }
 

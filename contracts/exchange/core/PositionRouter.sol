@@ -651,8 +651,7 @@ contract PositionRouter is BasePositionManager, IPositionRouter {
         internal
         view
         returns (bool)
-    {   
-
+    {
         if (_positionBlockTime.add(maxTimeDelay) <= block.timestamp) {
             revert("expired");
         }
@@ -677,8 +676,7 @@ contract PositionRouter is BasePositionManager, IPositionRouter {
         internal
         view
         returns (bool)
-    {   
-
+    {
         bool isKeeperCall = msg.sender == address(this) || isPositionKeeper[msg.sender];
 
         if (isKeeperCall) {

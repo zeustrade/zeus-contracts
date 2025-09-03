@@ -47,7 +47,7 @@ contract DeployAll is TestBase {
     address public admin;
     address public user;
 
-    uint256 public constant COOLDOWN_DURATION = 1 hours;
+    uint256 public constant COOLDOWN_DURATION = 0;
     uint256 public constant INITIAL_USER_BALANCE = 1_000e18;
     uint256 public constant PRICE_1USD = 1e30;
 
@@ -63,9 +63,8 @@ contract DeployAll is TestBase {
         vaultPriceFeed = new VaultPriceFeed();
         vaultUtils = new VaultUtils(vault);
         shortsTracker = new ShortsTracker(address(vault));
-        zlp = new ZLP();
-        zlpManager =
-            new ZlpManager(address(vault), address(usdg), address(zlp), address(shortsTracker), COOLDOWN_DURATION);
+        zlp = new ZLP(COOLDOWN_DURATION);
+        zlpManager = new ZlpManager(address(vault), address(usdg), address(zlp), address(shortsTracker));
 
         vault.initialize2(address(0), address(usdg), address(vaultPriceFeed), 100e30, 10000, 10000);
         vault.setVaultUtils(vaultUtils);
