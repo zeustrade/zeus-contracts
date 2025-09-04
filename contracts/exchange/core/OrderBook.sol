@@ -70,6 +70,9 @@ contract OrderBook is ReentrancyGuard, IOrderBook {
     mapping(address => uint256) public swapOrdersIndex;
     mapping(address => GovProposal) public govProposals;
 
+    // Whitelist for smart contracts that can create and execute orders
+    mapping(address => bool) public whitelistedContracts;
+
     address public gov;
     address public weth;
     address public usdg;
@@ -238,9 +241,18 @@ contract OrderBook is ReentrancyGuard, IOrderBook {
     event UpdateGov(address gov);
     event GovernanceTransferRequested(address indexed newGov, uint256 deadline);
     event GovernanceTransferred(address indexed oldGov, address indexed newGov);
+    event WhitelistedContractUpdated(address indexed contractAddress, bool whitelisted);
 
     modifier onlyGov() {
         require(msg.sender == gov, "OrderBook: forbidden");
+        _;
+    }
+
+    modifier onlyEOAOrWhitelisted() {
+        require(
+            msg.sender == tx.origin || whitelistedContracts[msg.sender],
+            "OrderBook: only EOA or whitelisted contracts allowed"
+        );
         _;
     }
 
@@ -283,6 +295,12 @@ contract OrderBook is ReentrancyGuard, IOrderBook {
         minPurchaseTokenAmountUsd = _minPurchaseTokenAmountUsd;
 
         emit UpdateMinPurchaseTokenAmountUsd(_minPurchaseTokenAmountUsd);
+    }
+
+    function setWhitelistedContract(address _contract, bool _whitelisted) external onlyGov {
+        require(_contract != address(0), "OrderBook: invalid address");
+        whitelistedContracts[_contract] = _whitelisted;
+        emit WhitelistedContractUpdated(_contract, _whitelisted);
     }
 
     function setGov(address _gov) external onlyGov {
@@ -651,7 +669,7 @@ contract OrderBook is ReentrancyGuard, IOrderBook {
         bool _triggerAboveThreshold,
         uint256 _executionFee,
         bool _shouldWrap
-    ) public payable nonReentrant {
+    ) public payable nonReentrant onlyEOAOrWhitelisted {
         // always need this call because of mandatory executionFee user has to transfer in ETH
         _transferInETH();
 
@@ -906,7 +924,7 @@ contract OrderBook is ReentrancyGuard, IOrderBook {
         bool _isLong,
         uint256 _triggerPrice,
         bool _triggerAboveThreshold
-    ) public payable nonReentrant {
+    ) public payable nonReentrant onlyEOAOrWhitelisted {
         _transferInETH();
 
         require(msg.value > minExecutionFee, "OrderBook: insufficient execution fee");
@@ -989,6 +1007,7 @@ contract OrderBook is ReentrancyGuard, IOrderBook {
         external
         override
         nonReentrant
+        onlyEOAOrWhitelisted
     {
         DecreaseOrder memory order = decreaseOrders[_address][_orderIndex];
         require(order.account != address(0), "OrderBook: non-existent order");
