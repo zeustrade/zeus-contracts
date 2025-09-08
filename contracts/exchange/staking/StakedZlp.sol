@@ -7,6 +7,8 @@ import "../libraries/token/IERC20.sol";
 
 import "../core/interfaces/IZlpManager.sol";
 
+import "../zus/interfaces/IZLP.sol";
+
 import "./interfaces/IRewardTracker.sol";
 import "./interfaces/IRewardTracker.sol";
 
@@ -25,16 +27,11 @@ contract StakedZlp {
     address public stakedZlpTracker;
     address public feeZlpTracker;
 
-    mapping (address => mapping (address => uint256)) public allowances;
+    mapping(address => mapping(address => uint256)) public allowances;
 
     event Approval(address indexed owner, address indexed spender, uint256 value);
 
-    constructor(
-        address _zlp,
-        IZlpManager _zlpManager,
-        address _stakedZlpTracker,
-        address _feeZlpTracker
-    ) public {
+    constructor(address _zlp, IZlpManager _zlpManager, address _stakedZlpTracker, address _feeZlpTracker) public {
         zlp = _zlp;
         zlpManager = _zlpManager;
         stakedZlpTracker = _stakedZlpTracker;
@@ -56,7 +53,8 @@ contract StakedZlp {
     }
 
     function transferFrom(address _sender, address _recipient, uint256 _amount) external returns (bool) {
-        uint256 nextAllowance = allowances[_sender][msg.sender].sub(_amount, "StakedZlp: transfer amount exceeds allowance");
+        uint256 nextAllowance =
+            allowances[_sender][msg.sender].sub(_amount, "StakedZlp: transfer amount exceeds allowance");
         _approve(_sender, msg.sender, nextAllowance);
         _transfer(_sender, _recipient, _amount);
         return true;
@@ -84,14 +82,21 @@ contract StakedZlp {
         require(_recipient != address(0), "StakedZlp: transfer to the zero address");
 
         require(
-            zlpManager.lastAddedAt(_sender).add(zlpManager.cooldownDuration()) <= block.timestamp,
+            IZLP(zlp).lastAddedAt(_sender).add(IZLP(zlp).cooldownDuration()) <= block.timestamp,
             "StakedZlp: cooldown duration not yet passed"
         );
 
-        IRewardTracker(stakedZlpTracker).unstakeForAccount(_sender, feeZlpTracker, _amount, _sender);
-        IRewardTracker(feeZlpTracker).unstakeForAccount(_sender, zlp, _amount, _sender);
+        IRewardTracker(stakedZlpTracker).unstakeForAccount(_sender, feeZlpTracker, _amount, address(this));
 
-        IRewardTracker(feeZlpTracker).stakeForAccount(_sender, _recipient, zlp, _amount);
-        IRewardTracker(stakedZlpTracker).stakeForAccount(_recipient, _recipient, feeZlpTracker, _amount);
+        IERC20(feeZlpTracker).transfer(_sender, _amount);
+        IRewardTracker(feeZlpTracker).unstakeForAccount(_sender, zlp, _amount, address(this));
+
+        IERC20(zlp).approve(feeZlpTracker, _amount);
+        IRewardTracker(feeZlpTracker).stakeForAccount(address(this), _recipient, zlp, _amount);
+
+        IERC20(feeZlpTracker).approve(stakedZlpTracker, _amount);
+        IRewardTracker(stakedZlpTracker).stakeForAccount(address(this), _recipient, feeZlpTracker, _amount);
+
+        IERC20(stakedZlpTracker).transfer(_recipient, _amount);
     }
 }

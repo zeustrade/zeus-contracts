@@ -13,6 +13,11 @@ pragma solidity 0.6.12;
 contract VaultPriceFeed is IVaultPriceFeed {
     using SafeMath for uint256;
 
+    struct GovProposal {
+        uint256 deadline;
+        bool isActive;
+    }
+
     uint256 public constant PRICE_PRECISION = 10 ** 30;
     uint256 public constant ONE_USD = PRICE_PRECISION;
     uint256 public constant BASIS_POINTS_DIVISOR = 10000;
@@ -21,9 +26,11 @@ contract VaultPriceFeed is IVaultPriceFeed {
     uint256 public constant MAX_ADJUSTMENT_BASIS_POINTS = 20;
 
     // Identifier of the Sequencer offline flag on the Flags contract
-    address constant private FLAG_ARBITRUM_SEQ_OFFLINE = address(bytes20(bytes32(uint256(keccak256("chainlink.flags.arbitrum-seq-offline")) - 1)));
+    address private constant FLAG_ARBITRUM_SEQ_OFFLINE =
+        address(bytes20(bytes32(uint256(keccak256("chainlink.flags.arbitrum-seq-offline")) - 1)));
 
     address public gov;
+    mapping(address => GovProposal) public govProposals;
     address public chainlinkFlags;
 
     bool public isAmmEnabled = true;
@@ -42,35 +49,78 @@ contract VaultPriceFeed is IVaultPriceFeed {
     address public ethBnb;
     address public btcBnb;
 
-    mapping (address => address) public priceFeeds;
-    mapping (address => uint256) public priceDecimals;
-    mapping (address => uint256) public spreadBasisPoints;
+    mapping(address => address) public priceFeeds;
+    mapping(address => uint256) public priceDecimals;
+    mapping(address => uint256) public spreadBasisPoints;
     // Chainlink can return prices for stablecoins
     // that differs from 1 USD by a larger percentage than stableSwapFeeBasisPoints
     // we use strictStableTokens to cap the price to 1 USD
     // this allows us to configure stablecoins like DAI as being a stableToken
     // while not being a strictStableToken
-    mapping (address => bool) public strictStableTokens;
+    mapping(address => bool) public strictStableTokens;
 
-    mapping (address => uint256) public override adjustmentBasisPoints;
-    mapping (address => bool) public override isAdjustmentAdditive;
-    mapping (address => uint256) public lastAdjustmentTimings;
+    mapping(address => uint256) public override adjustmentBasisPoints;
+    mapping(address => bool) public override isAdjustmentAdditive;
+    mapping(address => uint256) public lastAdjustmentTimings;
 
     modifier onlyGov() {
         require(msg.sender == gov, "VaultPriceFeed: forbidden");
         _;
     }
 
+    event GovernanceTransferRequested(address indexed newGov, uint256 deadline);
+    event GovernanceTransferred(address indexed oldGov, address indexed newGov);
+    event ChainlinkFlagsSet(address chainlinkFlags);
+    event AdjustmentSet(address indexed token, bool isAdditive, uint256 adjustmentBps);
+    event UseV2PricingSet(bool useV2Pricing);
+    event IsAmmEnabledSet(bool isAmmEnabled);
+    event IsSecondaryPriceEnabledSet(bool isSecondaryPriceEnabled);
+    event SecondaryPriceFeedSet(address secondaryPriceFeed);
+    event TokensSet(address btc, address eth, address bnb);
+    event PairsSet(address bnbBusd, address ethBnb, address btcBnb);
+    event SpreadBasisPointsSet(address indexed token, uint256 spreadBasisPoints);
+    event SpreadThresholdBasisPointsSet(uint256 spreadThresholdBasisPoints);
+    event FavorPrimaryPriceSet(bool favorPrimaryPrice);
+    event PriceSampleSpaceSet(uint256 priceSampleSpace);
+    event MaxStrictPriceDeviationSet(uint256 maxStrictPriceDeviation);
+    event TokenConfigSet(address indexed token, address priceFeed, uint256 priceDecimals, bool isStrictStable);
+
     constructor() public {
         gov = msg.sender;
     }
 
     function setGov(address _gov) external onlyGov {
-        gov = _gov;
+        require(_gov != address(0), "VaultPriceFeed: invalid address");
+        require(_gov != gov, "VaultPriceFeed: same governance");
+        _requestForGov(_gov, type(uint256).max);
+    }
+
+    function setGovWithDeadline(address _gov, uint256 _deadline) external onlyGov {
+        require(_gov != address(0), "VaultPriceFeed: invalid address");
+        require(_gov != gov, "VaultPriceFeed: same governance");
+        _requestForGov(_gov, _deadline);
+    }
+
+    function acceptGov() external {
+        GovProposal storage proposal = govProposals[msg.sender];
+        require(proposal.deadline > block.timestamp, "VaultPriceFeed: deadline expired");
+        require(proposal.isActive == true, "VaultPriceFeed: proposal is not active");
+
+        address oldGov = gov;
+        delete govProposals[msg.sender];
+        gov = msg.sender;
+
+        emit GovernanceTransferred(oldGov, msg.sender);
+    }
+
+    function cancelGovProposal(address _gov) external onlyGov {
+        require(govProposals[_gov].isActive, "VaultPriceFeed: proposal not active");
+        delete govProposals[_gov];
     }
 
     function setChainlinkFlags(address _chainlinkFlags) external onlyGov {
         chainlinkFlags = _chainlinkFlags;
+        emit ChainlinkFlagsSet(_chainlinkFlags);
     }
 
     function setAdjustment(address _token, bool _isAdditive, uint256 _adjustmentBps) external override onlyGov {
@@ -82,71 +132,90 @@ contract VaultPriceFeed is IVaultPriceFeed {
         isAdjustmentAdditive[_token] = _isAdditive;
         adjustmentBasisPoints[_token] = _adjustmentBps;
         lastAdjustmentTimings[_token] = block.timestamp;
+        emit AdjustmentSet(_token, _isAdditive, _adjustmentBps);
     }
 
     function setUseV2Pricing(bool _useV2Pricing) external override onlyGov {
         useV2Pricing = _useV2Pricing;
+        emit UseV2PricingSet(_useV2Pricing);
     }
 
     function setIsAmmEnabled(bool _isEnabled) external override onlyGov {
         isAmmEnabled = _isEnabled;
+        emit IsAmmEnabledSet(_isEnabled);
     }
 
     function setIsSecondaryPriceEnabled(bool _isEnabled) external override onlyGov {
         isSecondaryPriceEnabled = _isEnabled;
+        emit IsSecondaryPriceEnabledSet(_isEnabled);
     }
 
     function setSecondaryPriceFeed(address _secondaryPriceFeed) external onlyGov {
         secondaryPriceFeed = _secondaryPriceFeed;
+        emit SecondaryPriceFeedSet(_secondaryPriceFeed);
     }
 
     function setTokens(address _btc, address _eth, address _bnb) external onlyGov {
         btc = _btc;
         eth = _eth;
         bnb = _bnb;
+        emit TokensSet(_btc, _eth, _bnb);
     }
 
     function setPairs(address _bnbBusd, address _ethBnb, address _btcBnb) external onlyGov {
         bnbBusd = _bnbBusd;
         ethBnb = _ethBnb;
         btcBnb = _btcBnb;
+        emit PairsSet(_bnbBusd, _ethBnb, _btcBnb);
     }
 
     function setSpreadBasisPoints(address _token, uint256 _spreadBasisPoints) external override onlyGov {
         require(_spreadBasisPoints <= MAX_SPREAD_BASIS_POINTS, "VaultPriceFeed: invalid _spreadBasisPoints");
         spreadBasisPoints[_token] = _spreadBasisPoints;
+        emit SpreadBasisPointsSet(_token, _spreadBasisPoints);
     }
 
     function setSpreadThresholdBasisPoints(uint256 _spreadThresholdBasisPoints) external override onlyGov {
         spreadThresholdBasisPoints = _spreadThresholdBasisPoints;
+        emit SpreadThresholdBasisPointsSet(_spreadThresholdBasisPoints);
     }
 
     function setFavorPrimaryPrice(bool _favorPrimaryPrice) external override onlyGov {
         favorPrimaryPrice = _favorPrimaryPrice;
+        emit FavorPrimaryPriceSet(_favorPrimaryPrice);
     }
 
     function setPriceSampleSpace(uint256 _priceSampleSpace) external override onlyGov {
         require(_priceSampleSpace > 0, "VaultPriceFeed: invalid _priceSampleSpace");
         priceSampleSpace = _priceSampleSpace;
+        emit PriceSampleSpaceSet(_priceSampleSpace);
     }
 
     function setMaxStrictPriceDeviation(uint256 _maxStrictPriceDeviation) external override onlyGov {
         maxStrictPriceDeviation = _maxStrictPriceDeviation;
+        emit MaxStrictPriceDeviationSet(_maxStrictPriceDeviation);
     }
 
-    function setTokenConfig(
-        address _token,
-        address _priceFeed,
-        uint256 _priceDecimals,
-        bool _isStrictStable
-    ) external override onlyGov {
+    function setTokenConfig(address _token, address _priceFeed, uint256 _priceDecimals, bool _isStrictStable)
+        external
+        override
+        onlyGov
+    {
         priceFeeds[_token] = _priceFeed;
         priceDecimals[_token] = _priceDecimals;
         strictStableTokens[_token] = _isStrictStable;
+        emit TokenConfigSet(_token, _priceFeed, _priceDecimals, _isStrictStable);
     }
 
-    function getPrice(address _token, bool _maximise, bool _includeAmmPrice, bool /* _useSwapPricing */) public override view returns (uint256) {
-        uint256 price = useV2Pricing ? getPriceV2(_token, _maximise, _includeAmmPrice) : getPriceV1(_token, _maximise, _includeAmmPrice);
+    function getPrice(address _token, bool _maximise, bool _includeAmmPrice, bool /* _useSwapPricing */ )
+        public
+        view
+        override
+        returns (uint256)
+    {
+        uint256 price = useV2Pricing
+            ? getPriceV2(_token, _maximise, _includeAmmPrice)
+            : getPriceV1(_token, _maximise, _includeAmmPrice);
 
         uint256 adjustmentBps = adjustmentBasisPoints[_token];
         if (adjustmentBps > 0) {
@@ -214,7 +283,6 @@ contract VaultPriceFeed is IVaultPriceFeed {
         uint256 price;
 
         if (strictStableTokens[_token]) {
-
             return ONE_USD;
         }
 
@@ -228,7 +296,7 @@ contract VaultPriceFeed is IVaultPriceFeed {
             price = getPrimaryPrice(_token, _maximise);
         }
 
-        return price;
+        // return price;
 
         // if (strictStableTokens[_token]) {
         //     uint256 delta = price > ONE_USD ? price.sub(ONE_USD) : ONE_USD.sub(price);
@@ -283,13 +351,11 @@ contract VaultPriceFeed is IVaultPriceFeed {
         return _primaryPrice;
     }
 
-    function getLatestPrimaryPrice(address _token) public override view returns (uint256) {
+    function getLatestPrimaryPrice(address _token) public view override returns (uint256) {
         // address priceFeedAddress = priceFeeds[_token];
         // require(priceFeedAddress != address(0), "VaultPriceFeed: invalid price feed");
 
         // IPriceFeed priceFeed = IPriceFeed(priceFeedAddress);
-
-        
 
         // int256 price = priceFeed.latestAnswer();
         // require(price > 0, "VaultPriceFeed: invalid price");
@@ -299,27 +365,26 @@ contract VaultPriceFeed is IVaultPriceFeed {
         return getSecondaryPrice(_token, 0, true);
     }
 
-    function getPrimaryPrice(address _token, bool _maximise) public override view returns (uint256) {
-        return getSecondaryPrice(_token, 0, _maximise);
+    function getPrimaryPrice(address _token, bool _maximise) public view override returns (uint256) {
+        // return getSecondaryPrice(_token, 0, _maximise);
         address priceFeedAddress = priceFeeds[_token];
         require(priceFeedAddress != address(0), "VaultPriceFeed: invalid price feed");
 
         if (chainlinkFlags != address(0)) {
             bool isRaised = IChainlinkFlags(chainlinkFlags).getFlag(FLAG_ARBITRUM_SEQ_OFFLINE);
             if (isRaised) {
-                    // If flag is raised we shouldn't perform any critical operations
+                // If flag is raised we shouldn't perform any critical operations
                 revert("Chainlink feeds are not being updated");
             }
         }
 
         IPriceFeed priceFeed = IPriceFeed(priceFeedAddress);
 
-
         uint256 price = 0;
         uint80 roundId = priceFeed.latestRound();
 
         for (uint80 i = 0; i < priceSampleSpace; i++) {
-            if (roundId <= i) { break; }
+            if (roundId <= i) break;
             uint256 p;
 
             if (i == 0) {
@@ -327,7 +392,7 @@ contract VaultPriceFeed is IVaultPriceFeed {
                 require(_p > 0, "VaultPriceFeed: invalid price");
                 p = uint256(_p);
             } else {
-                (, int256 _p, , ,) = priceFeed.getRoundData(roundId - i);
+                (, int256 _p,,,) = priceFeed.getRoundData(roundId - i);
                 require(_p > 0, "VaultPriceFeed: invalid price");
                 p = uint256(_p);
             }
@@ -354,11 +419,11 @@ contract VaultPriceFeed is IVaultPriceFeed {
     }
 
     function getSecondaryPrice(address _token, uint256 _referencePrice, bool _maximise) public view returns (uint256) {
-        if (secondaryPriceFeed == address(0)) { return _referencePrice; }
+        if (secondaryPriceFeed == address(0)) return _referencePrice;
         return ISecondaryPriceFeed(secondaryPriceFeed).getPrice(_token, _referencePrice, _maximise);
     }
 
-    function getAmmPrice(address _token) public override view returns (uint256) {
+    function getAmmPrice(address _token) public view override returns (uint256) {
         if (_token == bnb) {
             // for bnbBusd, reserve0: BNB, reserve1: BUSD
             return getPairPrice(bnbBusd, true);
@@ -386,12 +451,18 @@ contract VaultPriceFeed is IVaultPriceFeed {
     // if divByReserve0: calculate price as reserve1 / reserve0
     // if !divByReserve1: calculate price as reserve0 / reserve1
     function getPairPrice(address _pair, bool _divByReserve0) public view returns (uint256) {
-        (uint256 reserve0, uint256 reserve1, ) = IPancakePair(_pair).getReserves();
+        (uint256 reserve0, uint256 reserve1,) = IPancakePair(_pair).getReserves();
         if (_divByReserve0) {
-            if (reserve0 == 0) { return 0; }
+            if (reserve0 == 0) return 0;
             return reserve1.mul(PRICE_PRECISION).div(reserve0);
         }
-        if (reserve1 == 0) { return 0; }
+        if (reserve1 == 0) return 0;
         return reserve0.mul(PRICE_PRECISION).div(reserve1);
+    }
+
+    function _requestForGov(address _gov, uint256 _deadline) internal {
+        govProposals[_gov] = GovProposal(_deadline, true);
+
+        emit GovernanceTransferRequested(_gov, _deadline);
     }
 }

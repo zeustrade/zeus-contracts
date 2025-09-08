@@ -1,0 +1,22 @@
+[profile.default]
+src = "contracts"
+out = "out"
+libs = ["lib"]
+via_ir = true
+optimizer = true
+optimizer_runs = 20
+
+remappings = [
+    "ds-test/=lib/ds-test/src/",
+    "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+    "@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/",
+    "forge-std/=../zeus-contracts0.8.30/lib/forge-std/src/",
+]
+
+allow_paths = ["../zeus-contracts0.8.30/lib"]
+
+[invariant]
+show_metrics = false
+
+[lint]
+lint_on_build = false

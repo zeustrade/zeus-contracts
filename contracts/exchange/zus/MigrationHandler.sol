@@ -29,7 +29,7 @@ contract MigrationHandler is ReentrancyGuard {
     address public bnb;
     address public busd;
 
-    mapping (address => mapping (address => uint256)) public refundedAmounts;
+    mapping(address => mapping(address => uint256)) public refundedAmounts;
 
     modifier onlyAdmin() {
         require(msg.sender == admin, "MigrationHandler: forbidden");
@@ -65,11 +65,11 @@ contract MigrationHandler is ReentrancyGuard {
         busd = _busd;
     }
 
-    function redeemUsdg(
-        address _migrator,
-        address _redemptionToken,
-        uint256 _usdgAmount
-    ) external onlyAdmin nonReentrant {
+    function redeemUsdg(address _migrator, address _redemptionToken, uint256 _usdgAmount)
+        external
+        onlyAdmin
+        nonReentrant
+    {
         IERC20(usdg).transferFrom(_migrator, vault, _usdgAmount);
         uint256 amount = IVault(vault).sellUSDG(_redemptionToken, address(this));
 
@@ -85,66 +85,40 @@ contract MigrationHandler is ReentrancyGuard {
         }
 
         IERC20(_redemptionToken).approve(ammRouterV2, amount);
-        IAmmRouter(ammRouterV2).swapExactTokensForTokens(
-            amount,
-            0,
-            path,
-            _migrator,
-            block.timestamp
-        );
+        IAmmRouter(ammRouterV2).swapExactTokensForTokens(amount, 0, path, _migrator, block.timestamp);
     }
 
-    function swap(
-        address _migrator,
-        uint256 _zmtAmountForUsdg,
-        uint256 _xzmtAmountForUsdg,
-        uint256 _zmtAmountForBusd
-    ) external onlyAdmin nonReentrant {
+    function swap(address _migrator, uint256 _zmtAmountForUsdg, uint256 _xzmtAmountForUsdg, uint256 _zmtAmountForBusd)
+        external
+        onlyAdmin
+        nonReentrant
+    {
         address[] memory path = new address[](2);
 
         path[0] = zmt;
         path[1] = usdg;
         IERC20(zmt).transferFrom(_migrator, address(this), _zmtAmountForUsdg);
         IERC20(zmt).approve(ammRouterV2, _zmtAmountForUsdg);
-        IAmmRouter(ammRouterV2).swapExactTokensForTokens(
-            _zmtAmountForUsdg,
-            0,
-            path,
-            _migrator,
-            block.timestamp
-        );
+        IAmmRouter(ammRouterV2).swapExactTokensForTokens(_zmtAmountForUsdg, 0, path, _migrator, block.timestamp);
 
         path[0] = xzmt;
         path[1] = usdg;
         IERC20(xzmt).transferFrom(_migrator, address(this), _xzmtAmountForUsdg);
         IERC20(xzmt).approve(ammRouterV2, _xzmtAmountForUsdg);
-        IAmmRouter(ammRouterV2).swapExactTokensForTokens(
-            _xzmtAmountForUsdg,
-            0,
-            path,
-            _migrator,
-            block.timestamp
-        );
+        IAmmRouter(ammRouterV2).swapExactTokensForTokens(_xzmtAmountForUsdg, 0, path, _migrator, block.timestamp);
 
         path[0] = zmt;
         path[1] = busd;
         IERC20(zmt).transferFrom(_migrator, address(this), _zmtAmountForBusd);
         IERC20(zmt).approve(ammRouterV1, _zmtAmountForBusd);
-        IAmmRouter(ammRouterV1).swapExactTokensForTokens(
-            _zmtAmountForBusd,
-            0,
-            path,
-            _migrator,
-            block.timestamp
-        );
+        IAmmRouter(ammRouterV1).swapExactTokensForTokens(_zmtAmountForBusd, 0, path, _migrator, block.timestamp);
     }
 
-    function refund(
-        address _migrator,
-        address _account,
-        address _token,
-        uint256 _usdgAmount
-    ) external onlyAdmin nonReentrant {
+    function refund(address _migrator, address _account, address _token, uint256 _usdgAmount)
+        external
+        onlyAdmin
+        nonReentrant
+    {
         address iouToken = IZusMigrator(_migrator).iouTokens(_token);
         uint256 iouBalance = IERC20(iouToken).balanceOf(_account);
         uint256 iouTokenAmount = _usdgAmount.div(2); // each ZUS is priced at $2

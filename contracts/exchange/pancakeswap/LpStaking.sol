@@ -1,9 +1,9 @@
 pragma solidity 0.6.12;
 
-import '../libraries/math/SafeMath.sol';
-import '../libraries/token/IERC20.sol';
-import '../libraries/token/SafeERC20.sol';
-import '../libraries/access/Ownable.sol';
+import "../libraries/math/SafeMath.sol";
+import "../libraries/token/IERC20.sol";
+import "../libraries/token/SafeERC20.sol";
+import "../libraries/access/Ownable.sol";
 
 contract LpStaking is Ownable {
     using SafeMath for uint256;
@@ -11,15 +11,15 @@ contract LpStaking is Ownable {
 
     // Info of each user.
     struct UserInfo {
-        uint256 amount;     // How many LP tokens the user has provided.
+        uint256 amount; // How many LP tokens the user has provided.
         uint256 rewardDebt; // Reward debt. See explanation below.
         bool inBlackList;
     }
 
     // Info of each pool.
     struct PoolInfo {
-        IERC20 lpToken;           // Address of LP token contract.
-        uint256 lastRewardBlock;  // Last block number that CAKEs distribution occurs.
+        IERC20 lpToken; // Address of LP token contract.
+        uint256 lastRewardBlock; // Last block number that CAKEs distribution occurs.
         uint256 accCakePerShare; // Accumulated CAKEs per share, times 1e12. See below.
     }
 
@@ -35,7 +35,7 @@ contract LpStaking is Ownable {
     // Info of each pool.
     PoolInfo public poolInfo;
     // Info of each user that stakes LP tokens.
-    mapping (address => UserInfo) public userInfo;
+    mapping(address => UserInfo) public userInfo;
     // The block number when CAKE mining starts.
     uint256 public startBlock;
     // The block number when CAKE mining ends.
@@ -60,11 +60,7 @@ contract LpStaking is Ownable {
         adminAddress = _adminAddress;
 
         // staking pool
-        poolInfo = PoolInfo({
-            lpToken: _lp,
-            lastRewardBlock: startBlock,
-            accCakePerShare: 0
-        });
+        poolInfo = PoolInfo({lpToken: _lp, lastRewardBlock: startBlock, accCakePerShare: 0});
     }
 
     modifier onlyAdmin() {
@@ -133,20 +129,20 @@ contract LpStaking is Ownable {
         UserInfo storage user = userInfo[msg.sender];
 
         // require (user.amount.add(msg.value) <= limitAmount, 'exceed the top');
-        require (!user.inBlackList, 'in black list');
+        require(!user.inBlackList, "in black list");
 
         updatePool();
 
-        if(_amount > 0) {
+        if (_amount > 0) {
             pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
             user.amount = user.amount.add(_amount);
         }
 
         uint256 pending = user.amount.mul(pool.accCakePerShare).div(1e12).sub(user.rewardDebt);
-        if(pending > 0) {
+        if (pending > 0) {
             rewardToken.safeTransfer(address(msg.sender), pending);
         }
-        
+
         user.rewardDebt = user.amount.mul(pool.accCakePerShare).div(1e12);
 
         emit Deposit(msg.sender, _amount);
@@ -159,10 +155,10 @@ contract LpStaking is Ownable {
         require(user.amount >= _amount, "withdraw: not good");
         updatePool();
         uint256 pending = user.amount.mul(pool.accCakePerShare).div(1e12).sub(user.rewardDebt);
-        if(pending > 0 && !user.inBlackList) {
+        if (pending > 0 && !user.inBlackList) {
             rewardToken.safeTransfer(address(msg.sender), pending);
         }
-        if(_amount > 0) {
+        if (_amount > 0) {
             user.amount = user.amount.sub(_amount);
             pool.lpToken.safeTransfer(address(msg.sender), _amount);
         }
@@ -183,8 +179,7 @@ contract LpStaking is Ownable {
 
     // Withdraw reward. EMERGENCY ONLY.
     function emergencyRewardWithdraw(uint256 _amount) public onlyOwner {
-        require(_amount < rewardToken.balanceOf(address(this)), 'not enough token');
+        require(_amount < rewardToken.balanceOf(address(this)), "not enough token");
         rewardToken.safeTransfer(address(msg.sender), _amount);
     }
-
 }

@@ -1,8 +1,8 @@
 pragma solidity 0.6.12;
 
-import '../libraries/math/SafeMath.sol';
-import '../libraries/token/IERC20.sol';
-import '../libraries/token/SafeERC20.sol';
+import "../libraries/math/SafeMath.sol";
+import "../libraries/token/IERC20.sol";
+import "../libraries/token/SafeERC20.sol";
 // import "@nomiclabs/buidler/console.sol";
 
 // SousChef is the chef of new tokens. He can make yummy food and he is a fair guy as well as MasterChef.
@@ -12,26 +12,26 @@ contract SousChef {
 
     // Info of each user.
     struct UserInfo {
-        uint256 amount;   // How many SYRUP tokens the user has provided.
-        uint256 rewardDebt;  // Reward debt. See explanation below.
+        uint256 amount; // How many SYRUP tokens the user has provided.
+        uint256 rewardDebt; // Reward debt. See explanation below.
         uint256 rewardPending;
-        //
-        // We do some fancy math here. Basically, any point in time, the amount of SYRUPs
-        // entitled to a user but is pending to be distributed is:
-        //
-        //   pending reward = (user.amount * pool.accRewardPerShare) - user.rewardDebt + user.rewardPending
-        //
-        // Whenever a user deposits or withdraws SYRUP tokens to a pool. Here's what happens:
-        //   1. The pool's `accRewardPerShare` (and `lastRewardBlock`) gets updated.
-        //   2. User receives the pending reward sent to his/her address.
-        //   3. User's `amount` gets updated.
-        //   3. User's `amount` gets updated.
-        //   4. User's `rewardDebt` gets updated.
     }
+    //
+    // We do some fancy math here. Basically, any point in time, the amount of SYRUPs
+    // entitled to a user but is pending to be distributed is:
+    //
+    //   pending reward = (user.amount * pool.accRewardPerShare) - user.rewardDebt + user.rewardPending
+    //
+    // Whenever a user deposits or withdraws SYRUP tokens to a pool. Here's what happens:
+    //   1. The pool's `accRewardPerShare` (and `lastRewardBlock`) gets updated.
+    //   2. User receives the pending reward sent to his/her address.
+    //   3. User's `amount` gets updated.
+    //   3. User's `amount` gets updated.
+    //   4. User's `rewardDebt` gets updated.
 
     // Info of Pool
     struct PoolInfo {
-        uint256 lastRewardBlock;  // Last block number that Rewards distribution occurs.
+        uint256 lastRewardBlock; // Last block number that Rewards distribution occurs.
         uint256 accRewardPerShare; // Accumulated reward per share, times 1e12. See below.
     }
 
@@ -43,7 +43,7 @@ contract SousChef {
     // Info.
     PoolInfo public poolInfo;
     // Info of each user that stakes Syrup tokens.
-    mapping (address => UserInfo) public userInfo;
+    mapping(address => UserInfo) public userInfo;
 
     // addresses list
     address[] public addressList;
@@ -57,22 +57,14 @@ contract SousChef {
     event Withdraw(address indexed user, uint256 amount);
     event EmergencyWithdraw(address indexed user, uint256 amount);
 
-    constructor(
-        IERC20 _syrup,
-        uint256 _rewardPerBlock,
-        uint256 _startBlock,
-        uint256 _endBlock
-    ) public {
+    constructor(IERC20 _syrup, uint256 _rewardPerBlock, uint256 _startBlock, uint256 _endBlock) public {
         syrup = _syrup;
         rewardPerBlock = _rewardPerBlock;
         startBlock = _startBlock;
         bonusEndBlock = _endBlock;
 
         // staking pool
-        poolInfo = PoolInfo({
-            lastRewardBlock: startBlock,
-            accRewardPerShare: 0
-        });
+        poolInfo = PoolInfo({lastRewardBlock: startBlock, accRewardPerShare: 0});
     }
 
     function addressLength() external view returns (uint256) {
@@ -121,10 +113,9 @@ contract SousChef {
         poolInfo.lastRewardBlock = block.number;
     }
 
-
     // Deposit Syrup tokens to SousChef for Reward allocation.
     function deposit(uint256 _amount) public {
-        require (_amount > 0, 'amount 0');
+        require(_amount > 0, "amount 0");
         UserInfo storage user = userInfo[msg.sender];
         updatePool();
         syrup.safeTransferFrom(address(msg.sender), address(this), _amount);
@@ -132,7 +123,8 @@ contract SousChef {
         if (user.amount == 0 && user.rewardPending == 0 && user.rewardDebt == 0) {
             addressList.push(address(msg.sender));
         }
-        user.rewardPending = user.amount.mul(poolInfo.accRewardPerShare).div(1e12).sub(user.rewardDebt).add(user.rewardPending);
+        user.rewardPending =
+            user.amount.mul(poolInfo.accRewardPerShare).div(1e12).sub(user.rewardDebt).add(user.rewardPending);
         user.amount = user.amount.add(_amount);
         user.rewardDebt = user.amount.mul(poolInfo.accRewardPerShare).div(1e12);
 
@@ -141,14 +133,15 @@ contract SousChef {
 
     // Withdraw Syrup tokens from SousChef.
     function withdraw(uint256 _amount) public {
-        require (_amount > 0, 'amount 0');
+        require(_amount > 0, "amount 0");
         UserInfo storage user = userInfo[msg.sender];
         require(user.amount >= _amount, "withdraw: not enough");
 
         updatePool();
         syrup.safeTransfer(address(msg.sender), _amount);
 
-        user.rewardPending = user.amount.mul(poolInfo.accRewardPerShare).div(1e12).sub(user.rewardDebt).add(user.rewardPending);
+        user.rewardPending =
+            user.amount.mul(poolInfo.accRewardPerShare).div(1e12).sub(user.rewardDebt).add(user.rewardPending);
         user.amount = user.amount.sub(_amount);
         user.rewardDebt = user.amount.mul(poolInfo.accRewardPerShare).div(1e12);
 
@@ -164,5 +157,4 @@ contract SousChef {
         user.rewardDebt = 0;
         user.rewardPending = 0;
     }
-
 }

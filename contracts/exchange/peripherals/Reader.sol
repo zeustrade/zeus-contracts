@@ -68,7 +68,11 @@ contract Reader is Governable {
         return amountIn;
     }
 
-    function getAmountOut(IVault _vault, address _tokenIn, address _tokenOut, uint256 _amountIn) public view returns (uint256, uint256) {
+    function getAmountOut(IVault _vault, address _tokenIn, address _tokenOut, uint256 _amountIn)
+        public
+        view
+        returns (uint256, uint256)
+    {
         uint256 priceIn = _vault.getMinPrice(_tokenIn);
 
         uint256 tokenInDecimals = _vault.tokenDecimals(_tokenIn);
@@ -98,7 +102,11 @@ contract Reader is Governable {
         return (amountOutAfterFees, feeAmount);
     }
 
-    function getFeeBasisPoints(IVault _vault, address _tokenIn, address _tokenOut, uint256 _amountIn) public view returns (uint256, uint256, uint256) {
+    function getFeeBasisPoints(IVault _vault, address _tokenIn, address _tokenOut, uint256 _amountIn)
+        public
+        view
+        returns (uint256, uint256, uint256)
+    {
         uint256 priceIn = _vault.getMinPrice(_tokenIn);
         uint256 tokenInDecimals = _vault.tokenDecimals(_tokenIn);
 
@@ -175,7 +183,11 @@ contract Reader is Governable {
         return amounts;
     }
 
-    function getFundingRates(address _vault, address _weth, address[] memory _tokens) public view returns (uint256[] memory) {
+    function getFundingRates(address _vault, address _weth, address[] memory _tokens)
+        public
+        view
+        returns (uint256[] memory)
+    {
         uint256 propsLength = 2;
         uint256[] memory fundingRates = new uint256[](_tokens.length * propsLength);
         IVault vault = IVault(_vault);
@@ -186,7 +198,8 @@ contract Reader is Governable {
                 token = _weth;
             }
 
-            uint256 fundingRateFactor = vault.stableTokens(token) ? vault.stableFundingRateFactor() : vault.fundingRateFactor();
+            uint256 fundingRateFactor =
+                vault.stableTokens(token) ? vault.stableFundingRateFactor() : vault.fundingRateFactor();
             uint256 reservedAmount = vault.reservedAmounts(token);
             uint256 poolAmount = vault.poolAmounts(token);
 
@@ -237,7 +250,11 @@ contract Reader is Governable {
         return balances;
     }
 
-    function getTokenBalancesWithSupplies(address _account, address[] memory _tokens) public view returns (uint256[] memory) {
+    function getTokenBalancesWithSupplies(address _account, address[] memory _tokens)
+        public
+        view
+        returns (uint256[] memory)
+    {
         uint256 propsLength = 2;
         uint256[] memory balances = new uint256[](_tokens.length * propsLength);
         for (uint256 i = 0; i < _tokens.length; i++) {
@@ -271,7 +288,11 @@ contract Reader is Governable {
         return amounts;
     }
 
-    function getVaultTokenInfo(address _vault, address _weth, uint256 _usdgAmount, address[] memory _tokens) public view returns (uint256[] memory) {
+    function getVaultTokenInfo(address _vault, address _weth, uint256 _usdgAmount, address[] memory _tokens)
+        public
+        view
+        returns (uint256[] memory)
+    {
         uint256 propsLength = 10;
 
         IVault vault = IVault(_vault);
@@ -298,7 +319,11 @@ contract Reader is Governable {
         return amounts;
     }
 
-    function getFullVaultTokenInfo(address _vault, address _weth, uint256 _usdgAmount, address[] memory _tokens) public view returns (uint256[] memory) {
+    function getFullVaultTokenInfo(address _vault, address _weth, uint256 _usdgAmount, address[] memory _tokens)
+        public
+        view
+        returns (uint256[] memory)
+    {
         uint256 propsLength = 12;
 
         IVault vault = IVault(_vault);
@@ -327,7 +352,11 @@ contract Reader is Governable {
         return amounts;
     }
 
-    function getVaultTokenInfoV2(address _vault, address _weth, uint256 _usdgAmount, address[] memory _tokens) public view returns (uint256[] memory) {
+    function getVaultTokenInfoV2(address _vault, address _weth, uint256 _usdgAmount, address[] memory _tokens)
+        public
+        view
+        returns (uint256[] memory)
+    {
         uint256 propsLength = 14;
 
         IVault vault = IVault(_vault);
@@ -360,34 +389,44 @@ contract Reader is Governable {
         return amounts;
     }
 
-    function getPositions(address _vault, address _account, address[] memory _collateralTokens, address[] memory _indexTokens, bool[] memory _isLong) public view returns(uint256[] memory) {
+    function getPositions(
+        address _vault,
+        address _account,
+        address[] memory _collateralTokens,
+        address[] memory _indexTokens,
+        bool[] memory _isLong
+    ) public view returns (uint256[] memory) {
         uint256[] memory amounts = new uint256[](_collateralTokens.length * POSITION_PROPS_LENGTH + 1);
 
         for (uint256 i = 0; i < _collateralTokens.length; i++) {
             {
-            (uint256 size,
-             uint256 collateral,
-             uint256 averagePrice,
-             uint256 entryFundingRate,
-             /* reserveAmount */,
-             uint256 realisedPnl,
-             bool hasRealisedProfit,
-             uint256 lastIncreasedTime) = IVault(_vault).getPosition(_account, _collateralTokens[i], _indexTokens[i], _isLong[i]);
+                (
+                    uint256 size,
+                    uint256 collateral,
+                    uint256 averagePrice,
+                    uint256 entryFundingRate,
+                    /* reserveAmount */
+                    ,
+                    uint256 realisedPnl,
+                    bool hasRealisedProfit,
+                    uint256 lastIncreasedTime
+                ) = IVault(_vault).getPosition(_account, _collateralTokens[i], _indexTokens[i], _isLong[i]);
 
-            amounts[i * POSITION_PROPS_LENGTH] = size;
-            amounts[i * POSITION_PROPS_LENGTH + 1] = collateral;
-            amounts[i * POSITION_PROPS_LENGTH + 2] = averagePrice;
-            amounts[i * POSITION_PROPS_LENGTH + 3] = entryFundingRate;
-            amounts[i * POSITION_PROPS_LENGTH + 4] = hasRealisedProfit ? 1 : 0;
-            amounts[i * POSITION_PROPS_LENGTH + 5] = realisedPnl;
-            amounts[i * POSITION_PROPS_LENGTH + 6] = lastIncreasedTime;
+                amounts[i * POSITION_PROPS_LENGTH] = size;
+                amounts[i * POSITION_PROPS_LENGTH + 1] = collateral;
+                amounts[i * POSITION_PROPS_LENGTH + 2] = averagePrice;
+                amounts[i * POSITION_PROPS_LENGTH + 3] = entryFundingRate;
+                amounts[i * POSITION_PROPS_LENGTH + 4] = hasRealisedProfit ? 1 : 0;
+                amounts[i * POSITION_PROPS_LENGTH + 5] = realisedPnl;
+                amounts[i * POSITION_PROPS_LENGTH + 6] = lastIncreasedTime;
             }
 
             uint256 size = amounts[i * POSITION_PROPS_LENGTH];
             uint256 averagePrice = amounts[i * POSITION_PROPS_LENGTH + 2];
             uint256 lastIncreasedTime = amounts[i * POSITION_PROPS_LENGTH + 6];
             if (averagePrice > 0) {
-                (bool hasProfit, uint256 delta) = IVault(_vault).getDelta(_indexTokens[i], size, averagePrice, _isLong[i], lastIncreasedTime);
+                (bool hasProfit, uint256 delta) =
+                    IVault(_vault).getDelta(_indexTokens[i], size, averagePrice, _isLong[i], lastIncreasedTime);
                 amounts[i * POSITION_PROPS_LENGTH + 7] = hasProfit ? 1 : 0;
                 amounts[i * POSITION_PROPS_LENGTH + 8] = delta;
             }

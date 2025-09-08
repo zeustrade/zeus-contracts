@@ -14,6 +14,7 @@ import "../tokens/interfaces/IYieldToken.sol";
 import "../tokens/interfaces/IBaseToken.sol";
 import "../tokens/interfaces/IMintable.sol";
 import "../tokens/interfaces/IUSDG.sol";
+import "../zus/interfaces/IZLP.sol";
 import "../staking/interfaces/IVester.sol";
 import "../staking/interfaces/IRewardRouterV2.sol";
 
@@ -34,6 +35,7 @@ contract Timelock is ITimelock {
     address public tokenManager;
     address public mintReceiver;
     address public zlpManager;
+    address public zlpToken;
     address public rewardRouter;
     uint256 public maxTokenSupply;
 
@@ -41,10 +43,10 @@ contract Timelock is ITimelock {
     uint256 public maxMarginFeeBasisPoints;
     bool public shouldToggleIsLeverageEnabled;
 
-    mapping (bytes32 => uint256) public pendingActions;
+    mapping(bytes32 => uint256) public pendingActions;
 
-    mapping (address => bool) public isHandler;
-    mapping (address => bool) public isKeeper;
+    mapping(address => bool) public isHandler;
+    mapping(address => bool) public isKeeper;
 
     event SignalPendingAction(bytes32 action);
     event SignalApprove(address token, address spender, uint256 amount, bytes32 action);
@@ -92,6 +94,7 @@ contract Timelock is ITimelock {
         address _tokenManager,
         address _mintReceiver,
         address _zlpManager,
+        address _zlpToken,
         address _rewardRouter,
         uint256 _maxTokenSupply,
         uint256 _marginFeeBasisPoints,
@@ -103,6 +106,7 @@ contract Timelock is ITimelock {
         tokenManager = _tokenManager;
         mintReceiver = _mintReceiver;
         zlpManager = _zlpManager;
+        zlpToken = _zlpToken;
         rewardRouter = _rewardRouter;
         maxTokenSupply = _maxTokenSupply;
 
@@ -155,11 +159,16 @@ contract Timelock is ITimelock {
     }
 
     function setMaxLeverage(address _vault, uint256 _maxLeverage) external onlyAdmin {
-      require(_maxLeverage > MAX_LEVERAGE_VALIDATION, "Timelock: invalid _maxLeverage");
-      IVault(_vault).setMaxLeverage(_maxLeverage);
+        require(_maxLeverage > MAX_LEVERAGE_VALIDATION, "Timelock: invalid _maxLeverage");
+        IVault(_vault).setMaxLeverage(_maxLeverage);
     }
 
-    function setFundingRate(address _vault, uint256 _fundingInterval, uint256 _fundingRateFactor, uint256 _stableFundingRateFactor) external onlyKeeperAndAbove {
+    function setFundingRate(
+        address _vault,
+        uint256 _fundingInterval,
+        uint256 _fundingRateFactor,
+        uint256 _stableFundingRateFactor
+    ) external onlyKeeperAndAbove {
         require(_fundingRateFactor < MAX_FUNDING_RATE_FACTOR, "Timelock: invalid _fundingRateFactor");
         require(_stableFundingRateFactor < MAX_FUNDING_RATE_FACTOR, "Timelock: invalid _stableFundingRateFactor");
         IVault(_vault).setFundingRate(_fundingInterval, _fundingRateFactor, _stableFundingRateFactor);
@@ -169,7 +178,10 @@ contract Timelock is ITimelock {
         shouldToggleIsLeverageEnabled = _shouldToggleIsLeverageEnabled;
     }
 
-    function setMarginFeeBasisPoints(uint256 _marginFeeBasisPoints, uint256 _maxMarginFeeBasisPoints) external onlyHandlerAndAbove {
+    function setMarginFeeBasisPoints(uint256 _marginFeeBasisPoints, uint256 _maxMarginFeeBasisPoints)
+        external
+        onlyHandlerAndAbove
+    {
         marginFeeBasisPoints = _marginFeeBasisPoints;
         maxMarginFeeBasisPoints = _maxMarginFeeBasisPoints;
     }
@@ -290,13 +302,7 @@ contract Timelock is ITimelock {
         bool isShortable = vault.shortableTokens(_token);
 
         IVault(_vault).setTokenConfig(
-            _token,
-            tokenDecimals,
-            _tokenWeight,
-            _minProfitBps,
-            _maxUsdgAmount,
-            isStable,
-            isShortable
+            _token, tokenDecimals, _tokenWeight, _minProfitBps, _maxUsdgAmount, isStable, isShortable
         );
 
         IVault(_vault).setBufferAmount(_token, _bufferAmount);
@@ -304,7 +310,10 @@ contract Timelock is ITimelock {
         IVault(_vault).setUsdgAmount(_token, _usdgAmount);
     }
 
-    function setUsdgAmounts(address _vault, address[] memory _tokens, uint256[] memory _usdgAmounts) external onlyKeeperAndAbove {
+    function setUsdgAmounts(address _vault, address[] memory _tokens, uint256[] memory _usdgAmounts)
+        external
+        onlyKeeperAndAbove
+    {
         for (uint256 i = 0; i < _tokens.length; i++) {
             IVault(_vault).setUsdgAmount(_tokens[i], _usdgAmounts[i]);
         }
@@ -333,7 +342,7 @@ contract Timelock is ITimelock {
 
     function setZlpCooldownDuration(uint256 _cooldownDuration) external onlyAdmin {
         require(_cooldownDuration < 2 hours, "Timelock: invalid _cooldownDuration");
-        IZlpManager(zlpManager).setCooldownDuration(_cooldownDuration);
+        IZLP(zlpToken).setCooldownDuration(_cooldownDuration);
     }
 
     function setMaxGlobalShortSize(address _vault, address _token, uint256 _amount) external onlyAdmin {
@@ -348,15 +357,24 @@ contract Timelock is ITimelock {
         IVault(_vault).setIsSwapEnabled(_isSwapEnabled);
     }
 
-    function setTier(address _referralStorage, uint256 _tierId, uint256 _totalRebate, uint256 _discountShare) external onlyKeeperAndAbove {
+    function setTier(address _referralStorage, uint256 _tierId, uint256 _totalRebate, uint256 _discountShare)
+        external
+        onlyKeeperAndAbove
+    {
         IReferralStorage(_referralStorage).setTier(_tierId, _totalRebate, _discountShare);
     }
 
-    function setReferrerTier(address _referralStorage, address _referrer, uint256 _tierId) external onlyKeeperAndAbove {
+    function setReferrerTier(address _referralStorage, address _referrer, uint256 _tierId)
+        external
+        onlyKeeperAndAbove
+    {
         IReferralStorage(_referralStorage).setReferrerTier(_referrer, _tierId);
     }
 
-    function govSetCodeOwner(address _referralStorage, bytes32 _code, address _newAccount) external onlyKeeperAndAbove {
+    function govSetCodeOwner(address _referralStorage, bytes32 _code, address _newAccount)
+        external
+        onlyKeeperAndAbove
+    {
         IReferralStorage(_referralStorage).govSetCodeOwner(_code, _newAccount);
     }
 
@@ -391,7 +409,10 @@ contract Timelock is ITimelock {
         IBaseToken(_token).setInPrivateTransferMode(_inPrivateTransferMode);
     }
 
-    function batchSetBonusRewards(address _vester, address[] memory _accounts, uint256[] memory _amounts) external onlyKeeperAndAbove {
+    function batchSetBonusRewards(address _vester, address[] memory _accounts, uint256[] memory _amounts)
+        external
+        onlyKeeperAndAbove
+    {
         require(_accounts.length == _amounts.length, "Timelock: invalid lengths");
 
         IHandlerTarget(_vester).setHandler(address(this), true);
@@ -422,7 +443,10 @@ contract Timelock is ITimelock {
         IERC20(_token).approve(_spender, _amount);
     }
 
-    function signalWithdrawToken(address _target, address _token, address _receiver, uint256 _amount) external onlyAdmin {
+    function signalWithdrawToken(address _target, address _token, address _receiver, uint256 _amount)
+        external
+        onlyAdmin
+    {
         bytes32 action = keccak256(abi.encodePacked("withdrawToken", _target, _token, _receiver, _amount));
         _setPendingAction(action);
         emit SignalWithdrawToken(_target, _token, _receiver, _amount, action);
@@ -522,29 +546,24 @@ contract Timelock is ITimelock {
         bool _isStable,
         bool _isShortable
     ) external onlyAdmin {
-        bytes32 action = keccak256(abi.encodePacked(
-            "vaultSetTokenConfig",
-            _vault,
-            _token,
-            _tokenDecimals,
-            _tokenWeight,
-            _minProfitBps,
-            _maxUsdgAmount,
-            _isStable,
-            _isShortable
-        ));
+        bytes32 action = keccak256(
+            abi.encodePacked(
+                "vaultSetTokenConfig",
+                _vault,
+                _token,
+                _tokenDecimals,
+                _tokenWeight,
+                _minProfitBps,
+                _maxUsdgAmount,
+                _isStable,
+                _isShortable
+            )
+        );
 
         _setPendingAction(action);
 
         emit SignalVaultSetTokenConfig(
-            _vault,
-            _token,
-            _tokenDecimals,
-            _tokenWeight,
-            _minProfitBps,
-            _maxUsdgAmount,
-            _isStable,
-            _isShortable
+            _vault, _token, _tokenDecimals, _tokenWeight, _minProfitBps, _maxUsdgAmount, _isStable, _isShortable
         );
     }
 
@@ -558,29 +577,25 @@ contract Timelock is ITimelock {
         bool _isStable,
         bool _isShortable
     ) external onlyAdmin {
-        bytes32 action = keccak256(abi.encodePacked(
-            "vaultSetTokenConfig",
-            _vault,
-            _token,
-            _tokenDecimals,
-            _tokenWeight,
-            _minProfitBps,
-            _maxUsdgAmount,
-            _isStable,
-            _isShortable
-        ));
+        bytes32 action = keccak256(
+            abi.encodePacked(
+                "vaultSetTokenConfig",
+                _vault,
+                _token,
+                _tokenDecimals,
+                _tokenWeight,
+                _minProfitBps,
+                _maxUsdgAmount,
+                _isStable,
+                _isShortable
+            )
+        );
 
         _validateAction(action);
         _clearAction(action);
 
         IVault(_vault).setTokenConfig(
-            _token,
-            _tokenDecimals,
-            _tokenWeight,
-            _minProfitBps,
-            _maxUsdgAmount,
-            _isStable,
-            _isShortable
+            _token, _tokenDecimals, _tokenWeight, _minProfitBps, _maxUsdgAmount, _isStable, _isShortable
         );
     }
 

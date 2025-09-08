@@ -20,16 +20,16 @@ contract ZMT is IERC20, IZMT, ITimelockTarget {
     bool public hasActiveMigration;
     uint256 public migrationTime;
 
-    mapping (address => uint256) public balances;
-    mapping (address => mapping (address => uint256)) public allowances;
+    mapping(address => uint256) public balances;
+    mapping(address => mapping(address => uint256)) public allowances;
 
-    mapping (address => bool) public admins;
+    mapping(address => bool) public admins;
 
     // only checked when hasActiveMigration is true
     // this can be used to block the AMM pair as a recipient
     // and protect liquidity providers during a migration
     // by disabling the selling of ZMT
-    mapping (address => bool) public blockedRecipients;
+    mapping(address => bool) public blockedRecipients;
 
     // only checked when hasActiveMigration is true
     // this can be used for:
@@ -38,7 +38,7 @@ contract ZMT is IERC20, IZMT, ITimelockTarget {
     // from adding liquidity before the initial liquidity is seeded
     // - only allowing removal of ZMT liquidity and no other actions
     // during the migration phase
-    mapping (address => bool) public allowedMsgSenders;
+    mapping(address => bool) public allowedMsgSenders;
 
     modifier onlyGov() {
         require(msg.sender == gov, "ZMT: forbidden");
@@ -140,7 +140,7 @@ contract ZMT is IERC20, IZMT, ITimelockTarget {
         balances[_sender] = balances[_sender].sub(_amount, "ZMT: transfer amount exceeds balance");
         balances[_recipient] = balances[_recipient].add(_amount);
 
-        emit Transfer(_sender, _recipient,_amount);
+        emit Transfer(_sender, _recipient, _amount);
     }
 
     function _mint(address _account, uint256 _amount) private {

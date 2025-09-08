@@ -5,6 +5,7 @@ pragma solidity 0.6.12;
 import "../libraries/math/SafeMath.sol";
 import "../libraries/token/IERC20.sol";
 import "../core/interfaces/IZlpManager.sol";
+import "../zus/interfaces/IZLP.sol";
 
 contract ZlpBalance {
     using SafeMath for uint256;
@@ -12,14 +13,11 @@ contract ZlpBalance {
     IZlpManager public zlpManager;
     address public stakedZlpTracker;
 
-    mapping (address => mapping (address => uint256)) public allowances;
+    mapping(address => mapping(address => uint256)) public allowances;
 
     event Approval(address indexed owner, address indexed spender, uint256 value);
 
-    constructor(
-        IZlpManager _zlpManager,
-        address _stakedZlpTracker
-    ) public {
+    constructor(IZlpManager _zlpManager, address _stakedZlpTracker) public {
         zlpManager = _zlpManager;
         stakedZlpTracker = _stakedZlpTracker;
     }
@@ -39,7 +37,8 @@ contract ZlpBalance {
     }
 
     function transferFrom(address _sender, address _recipient, uint256 _amount) external returns (bool) {
-        uint256 nextAllowance = allowances[_sender][msg.sender].sub(_amount, "ZlpBalance: transfer amount exceeds allowance");
+        uint256 nextAllowance =
+            allowances[_sender][msg.sender].sub(_amount, "ZlpBalance: transfer amount exceeds allowance");
         _approve(_sender, msg.sender, nextAllowance);
         _transfer(_sender, _recipient, _amount);
         return true;
@@ -59,7 +58,8 @@ contract ZlpBalance {
         require(_recipient != address(0), "ZlpBalance: transfer to the zero address");
 
         require(
-            zlpManager.lastAddedAt(_sender).add(zlpManager.cooldownDuration()) <= block.timestamp,
+            IZLP(zlpManager.zlp()).lastAddedAt(_sender).add(IZLP(zlpManager.zlp()).cooldownDuration())
+                <= block.timestamp,
             "ZlpBalance: cooldown duration not yet passed"
         );
 

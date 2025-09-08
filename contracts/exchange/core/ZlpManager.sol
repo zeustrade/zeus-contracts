@@ -5,6 +5,7 @@ import "../libraries/token/IERC20.sol";
 import "../libraries/token/SafeERC20.sol";
 import "../libraries/utils/ReentrancyGuard.sol";
 
+import "../zus/interfaces/IZLP.sol";
 import "./interfaces/IVault.sol";
 import "./interfaces/IZlpManager.sol";
 import "./interfaces/IShortsTracker.sol";
@@ -24,20 +25,27 @@ contract ZlpManager is ReentrancyGuard, Governable, IZlpManager {
     uint256 public constant MAX_COOLDOWN_DURATION = 48 hours;
     uint256 public constant BASIS_POINTS_DIVISOR = 10000;
 
-    IVault public override vault;
+    IVault public immutable override vault;
     IShortsTracker public shortsTracker;
-    address public override usdg;
-    address public override zlp;
+    address public immutable override usdg;
+    address public immutable override zlp;
 
-    uint256 public override cooldownDuration;
-    mapping (address => uint256) public override lastAddedAt;
+    // uint256 public override cooldownDuration;
+    // mapping(address => uint256) public override lastAddedAt;
 
     uint256 public aumAddition;
     uint256 public aumDeduction;
 
     bool public inPrivateMode;
     uint256 public shortsTrackerAveragePriceWeight;
-    mapping (address => bool) public isHandler;
+    mapping(address => bool) public isHandler;
+
+    event InPrivateModeSet(bool inPrivateMode);
+    event ShortsTrackerSet(address shortsTracker);
+    event ShortsTrackerAveragePriceWeightSet(uint256 weight);
+    event HandlerSet(address indexed handler, bool isActive);
+    event CooldownDurationSet(uint256 cooldownDuration);
+    event AumAdjustmentSet(uint256 aumAddition, uint256 aumDeduction);
 
     event AddLiquidity(
         address account,
@@ -59,58 +67,90 @@ contract ZlpManager is ReentrancyGuard, Governable, IZlpManager {
         uint256 amountOut
     );
 
-    constructor(address _vault, address _usdg, address _zlp, address _shortsTracker, uint256 _cooldownDuration) public {
+    constructor(address _vault, address _usdg, address _zlp, address _shortsTracker) public {
         gov = msg.sender;
         vault = IVault(_vault);
         usdg = _usdg;
         zlp = _zlp;
         shortsTracker = IShortsTracker(_shortsTracker);
-        cooldownDuration = _cooldownDuration;
     }
 
     function setInPrivateMode(bool _inPrivateMode) external onlyGov {
         inPrivateMode = _inPrivateMode;
+        emit InPrivateModeSet(_inPrivateMode);
     }
 
     function setShortsTracker(IShortsTracker _shortsTracker) external onlyGov {
         shortsTracker = _shortsTracker;
+        emit ShortsTrackerSet(address(_shortsTracker));
     }
 
     function setShortsTrackerAveragePriceWeight(uint256 _shortsTrackerAveragePriceWeight) external override onlyGov {
-        require(shortsTrackerAveragePriceWeight <= BASIS_POINTS_DIVISOR, "ZlpManager: invalid weight");
+        require(_shortsTrackerAveragePriceWeight <= BASIS_POINTS_DIVISOR, "ZlpManager: invalid weight");
         shortsTrackerAveragePriceWeight = _shortsTrackerAveragePriceWeight;
+        emit ShortsTrackerAveragePriceWeightSet(_shortsTrackerAveragePriceWeight);
     }
 
     function setHandler(address _handler, bool _isActive) external onlyGov {
         isHandler[_handler] = _isActive;
+        emit HandlerSet(_handler, _isActive);
     }
 
-    function setCooldownDuration(uint256 _cooldownDuration) external override onlyGov {
-        require(_cooldownDuration <= MAX_COOLDOWN_DURATION, "ZlpManager: invalid _cooldownDuration");
-        cooldownDuration = _cooldownDuration;
-    }
+    // function setCooldownDuration(uint256 _cooldownDuration) external override onlyGov {
+    //     require(_cooldownDuration <= MAX_COOLDOWN_DURATION, "ZlpManager: invalid _cooldownDuration");
+    //     cooldownDuration = _cooldownDuration;
+    //     emit CooldownDurationSet(_cooldownDuration);
+    // }
 
     function setAumAdjustment(uint256 _aumAddition, uint256 _aumDeduction) external onlyGov {
         aumAddition = _aumAddition;
         aumDeduction = _aumDeduction;
+        emit AumAdjustmentSet(_aumAddition, _aumDeduction);
     }
 
-    function addLiquidity(address _token, uint256 _amount, uint256 _minUsdg, uint256 _minZlp) external override nonReentrant returns (uint256) {
-        if (inPrivateMode) { revert("ZlpManager: action not enabled"); }
+    function addLiquidity(address _token, uint256 _amount, uint256 _minUsdg, uint256 _minZlp)
+        external
+        override
+        nonReentrant
+        returns (uint256)
+    {
+        if (inPrivateMode) {
+            revert("ZlpManager: action not enabled");
+        }
         return _addLiquidity(msg.sender, msg.sender, _token, _amount, _minUsdg, _minZlp);
     }
 
-    function addLiquidityForAccount(address _fundingAccount, address _account, address _token, uint256 _amount, uint256 _minUsdg, uint256 _minZlp) external override nonReentrant returns (uint256) {
+    function addLiquidityForAccount(
+        address _fundingAccount,
+        address _account,
+        address _token,
+        uint256 _amount,
+        uint256 _minUsdg,
+        uint256 _minZlp
+    ) external override nonReentrant returns (uint256) {
         _validateHandler();
         return _addLiquidity(_fundingAccount, _account, _token, _amount, _minUsdg, _minZlp);
     }
 
-    function removeLiquidity(address _tokenOut, uint256 _zlpAmount, uint256 _minOut, address _receiver) external override nonReentrant returns (uint256) {
-        if (inPrivateMode) { revert("ZlpManager: action not enabled"); }
+    function removeLiquidity(address _tokenOut, uint256 _zlpAmount, uint256 _minOut, address _receiver)
+        external
+        override
+        nonReentrant
+        returns (uint256)
+    {
+        if (inPrivateMode) {
+            revert("ZlpManager: action not enabled");
+        }
         return _removeLiquidity(msg.sender, _tokenOut, _zlpAmount, _minOut, _receiver);
     }
 
-    function removeLiquidityForAccount(address _account, address _tokenOut, uint256 _zlpAmount, uint256 _minOut, address _receiver) external override nonReentrant returns (uint256) {
+    function removeLiquidityForAccount(
+        address _account,
+        address _tokenOut,
+        uint256 _zlpAmount,
+        uint256 _minOut,
+        address _receiver
+    ) external override nonReentrant returns (uint256) {
         _validateHandler();
         return _removeLiquidity(_account, _tokenOut, _zlpAmount, _minOut, _receiver);
     }
@@ -118,6 +158,9 @@ contract ZlpManager is ReentrancyGuard, Governable, IZlpManager {
     function getPrice(bool _maximise) external view returns (uint256) {
         uint256 aum = getAum(_maximise);
         uint256 supply = IERC20(zlp).totalSupply();
+        if (supply == 0) {
+            return 0;
+        }
         return aum.mul(ZLP_PRECISION).div(supply);
     }
 
@@ -128,7 +171,7 @@ contract ZlpManager is ReentrancyGuard, Governable, IZlpManager {
         return amounts;
     }
 
-    function getAumInUsdg(bool maximise) public override view returns (uint256) {
+    function getAumInUsdg(bool maximise) public view override returns (uint256) {
         uint256 aum = getAum(maximise);
         return aum.mul(10 ** USDG_DECIMALS).div(PRICE_PRECISION);
     }
@@ -136,6 +179,10 @@ contract ZlpManager is ReentrancyGuard, Governable, IZlpManager {
     function getAum(bool maximise) public view returns (uint256) {
         uint256 length = vault.allWhitelistedTokensLength();
         uint256 aum = aumAddition;
+        if (aum > type(uint256).max / 2) {
+            // prevent overflow on additions below; just floor by deduction
+            return aumDeduction > aum ? 0 : aum.sub(aumDeduction);
+        }
         uint256 shortProfits = 0;
         IVault _vault = vault;
 
@@ -179,7 +226,13 @@ contract ZlpManager is ReentrancyGuard, Governable, IZlpManager {
     }
 
     function getGlobalShortDelta(address _token, uint256 _price, uint256 _size) public view returns (uint256, bool) {
+        if (_size == 0) {
+            return (0, false);
+        }
         uint256 averagePrice = getGlobalShortAveragePrice(_token);
+        if (averagePrice == 0) {
+            return (0, false);
+        }
         uint256 priceDelta = averagePrice > _price ? averagePrice.sub(_price) : _price.sub(averagePrice);
         uint256 delta = _size.mul(priceDelta).div(averagePrice);
         return (delta, averagePrice > _price);
@@ -201,12 +254,19 @@ contract ZlpManager is ReentrancyGuard, Governable, IZlpManager {
         uint256 vaultAveragePrice = vault.globalShortAveragePrices(_token);
         uint256 shortsTrackerAveragePrice = _shortsTracker.globalShortAveragePrices(_token);
 
-        return vaultAveragePrice.mul(BASIS_POINTS_DIVISOR.sub(_shortsTrackerAveragePriceWeight))
-            .add(shortsTrackerAveragePrice.mul(_shortsTrackerAveragePriceWeight))
-            .div(BASIS_POINTS_DIVISOR);
+        return vaultAveragePrice.mul(BASIS_POINTS_DIVISOR.sub(_shortsTrackerAveragePriceWeight)).add(
+            shortsTrackerAveragePrice.mul(_shortsTrackerAveragePriceWeight)
+        ).div(BASIS_POINTS_DIVISOR);
     }
 
-    function _addLiquidity(address _fundingAccount, address _account, address _token, uint256 _amount, uint256 _minUsdg, uint256 _minZlp) private returns (uint256) {
+    function _addLiquidity(
+        address _fundingAccount,
+        address _account,
+        address _token,
+        uint256 _amount,
+        uint256 _minUsdg,
+        uint256 _minZlp
+    ) private returns (uint256) {
         require(_amount > 0, "ZlpManager: invalid _amount");
 
         // calculate aum before buyUSDG
@@ -222,16 +282,23 @@ contract ZlpManager is ReentrancyGuard, Governable, IZlpManager {
 
         IMintable(zlp).mint(_account, mintAmount);
 
-        lastAddedAt[_account] = block.timestamp;
-
         emit AddLiquidity(_account, _token, _amount, aumInUsdg, zlpSupply, usdgAmount, mintAmount);
 
         return mintAmount;
     }
 
-    function _removeLiquidity(address _account, address _tokenOut, uint256 _zlpAmount, uint256 _minOut, address _receiver) private returns (uint256) {
+    function _removeLiquidity(
+        address _account,
+        address _tokenOut,
+        uint256 _zlpAmount,
+        uint256 _minOut,
+        address _receiver
+    ) private returns (uint256) {
         require(_zlpAmount > 0, "ZlpManager: invalid _zlpAmount");
-        require(lastAddedAt[_account].add(cooldownDuration) <= block.timestamp, "ZlpManager: cooldown duration not yet passed");
+        require(
+            IZLP(zlp).getAvailableBalance(_account) >= _zlpAmount,
+            "ZlpManager: insufficient available balance due to cooldown"
+        );
 
         // calculate aum before sellUSDG
         uint256 aumInUsdg = getAumInUsdg(false);

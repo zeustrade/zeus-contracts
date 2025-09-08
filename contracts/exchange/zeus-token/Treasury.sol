@@ -36,8 +36,8 @@ contract Treasury is ReentrancyGuard, ITimelockTarget {
 
     address public gov;
 
-    mapping (address => uint256) public swapAmounts;
-    mapping (address => bool) public swapWhitelist;
+    mapping(address => uint256) public swapAmounts;
+    mapping(address => bool) public swapWhitelist;
 
     modifier onlyGov() {
         require(msg.sender == gov, "Treasury: forbidden");
@@ -48,10 +48,7 @@ contract Treasury is ReentrancyGuard, ITimelockTarget {
         gov = msg.sender;
     }
 
-    function initialize(
-        address[] memory _addresses,
-        uint256[] memory _values
-    ) external onlyGov {
+    function initialize(address[] memory _addresses, uint256[] memory _values) external onlyGov {
         require(!isInitialized, "Treasury: already initialized");
         isInitialized = true;
 

@@ -16,9 +16,9 @@ contract TimeDistributor is IDistributor {
     address public gov;
     address public admin;
 
-    mapping (address => address) public rewardTokens;
-    mapping (address => uint256) public override tokensPerInterval;
-    mapping (address => uint256) public lastDistributionTime;
+    mapping(address => address) public rewardTokens;
+    mapping(address => uint256) public override tokensPerInterval;
+    mapping(address => uint256) public lastDistributionTime;
 
     event Distribute(address receiver, uint256 amount);
     event DistributionChange(address receiver, uint256 amount, address rewardToken);
@@ -84,12 +84,12 @@ contract TimeDistributor is IDistributor {
         address receiver = msg.sender;
         uint256 intervals = getIntervals(receiver);
 
-        if (intervals == 0) { return 0; }
+        if (intervals == 0) return 0;
 
         uint256 amount = getDistributionAmount(receiver);
         _updateLastDistributionTime(receiver);
 
-        if (amount == 0) { return 0; }
+        if (amount == 0) return 0;
 
         IERC20(rewardTokens[receiver]).safeTransfer(receiver, amount);
 
@@ -97,18 +97,18 @@ contract TimeDistributor is IDistributor {
         return amount;
     }
 
-    function getRewardToken(address _receiver) external override view returns (address) {
+    function getRewardToken(address _receiver) external view override returns (address) {
         return rewardTokens[_receiver];
     }
 
-    function getDistributionAmount(address _receiver) public override view returns (uint256) {
+    function getDistributionAmount(address _receiver) public view override returns (uint256) {
         uint256 _tokensPerInterval = tokensPerInterval[_receiver];
-        if (_tokensPerInterval == 0) { return 0; }
+        if (_tokensPerInterval == 0) return 0;
 
         uint256 intervals = getIntervals(_receiver);
         uint256 amount = _tokensPerInterval.mul(intervals);
 
-        if (IERC20(rewardTokens[_receiver]).balanceOf(address(this)) < amount) { return 0; }
+        if (IERC20(rewardTokens[_receiver]).balanceOf(address(this)) < amount) return 0;
 
         return amount;
     }

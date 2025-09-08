@@ -16,17 +16,111 @@ contract Router is IRouter {
     using SafeERC20 for IERC20;
     using Address for address payable;
 
+    struct GovProposal {
+        uint256 deadline;
+        bool isActive;
+    }
+
     address public gov;
+    mapping(address => GovProposal) public govProposals;
 
     // wrapped BNB / ETH
-    address public weth;
-    address public usdg;
-    address public vault;
+    address public immutable weth;
+    address public immutable usdg;
+    address public immutable vault;
 
-    mapping (address => bool) public plugins;
-    mapping (address => mapping (address => bool)) public approvedPlugins;
+    mapping(address => bool) public plugins;
+    mapping(address => mapping(address => bool)) public approvedPlugins;
 
     event Swap(address account, address tokenIn, address tokenOut, uint256 amountIn, uint256 amountOut);
+    event GovernanceTransferRequested(address indexed newGov, uint256 deadline);
+    event GovernanceTransferred(address indexed oldGov, address indexed newGov);
+    event PluginAdded(address indexed plugin);
+    event PluginRemoved(address indexed plugin);
+    event PluginApproved(address indexed account, address indexed plugin);
+    event PluginDenied(address indexed account, address indexed plugin);
+    event PluginTransfer(
+        address indexed plugin, address indexed token, address indexed account, address receiver, uint256 amount
+    );
+    event PluginIncreasePosition(
+        address indexed plugin,
+        address indexed account,
+        address indexed collateralToken,
+        address indexToken,
+        uint256 sizeDelta,
+        bool isLong
+    );
+    event PluginDecreasePosition(
+        address indexed plugin,
+        address indexed account,
+        address indexed collateralToken,
+        address indexToken,
+        uint256 collateralDelta,
+        uint256 sizeDelta,
+        bool isLong,
+        address receiver
+    );
+    event DirectPoolDepositCalled(address indexed token, address indexed sender, uint256 amount);
+    event IncreasePositionCalled(
+        address indexed sender,
+        address indexed collateralToken,
+        address indexed indexToken,
+        uint256 amountIn,
+        uint256 sizeDelta,
+        bool isLong,
+        uint256 price
+    );
+    event IncreasePositionETHCalled(
+        address indexed sender,
+        address indexed collateralToken,
+        address indexed indexToken,
+        uint256 msgValue,
+        uint256 sizeDelta,
+        bool isLong,
+        uint256 price
+    );
+    event DecreasePositionCalled(
+        address indexed sender,
+        address indexed collateralToken,
+        address indexed indexToken,
+        uint256 collateralDelta,
+        uint256 sizeDelta,
+        bool isLong,
+        address receiver,
+        uint256 price
+    );
+    event DecreasePositionETHCalled(
+        address indexed sender,
+        address indexed collateralToken,
+        address indexed indexToken,
+        uint256 collateralDelta,
+        uint256 sizeDelta,
+        bool isLong,
+        address receiver,
+        uint256 price
+    );
+    event DecreasePositionAndSwapCalled(
+        address indexed sender,
+        address indexed collateralToken,
+        address indexed indexToken,
+        uint256 collateralDelta,
+        uint256 sizeDelta,
+        bool isLong,
+        address receiver,
+        uint256 price,
+        uint256 minOut
+    );
+    event DecreasePositionAndSwapETHCalled(
+        address indexed sender,
+        address indexed collateralToken,
+        address indexed indexToken,
+        uint256 collateralDelta,
+        uint256 sizeDelta,
+        bool isLong,
+        address receiver,
+        uint256 price,
+        uint256 minOut
+    );
 
     modifier onlyGov() {
         require(msg.sender == gov, "Router: forbidden");
@@ -46,43 +140,95 @@ contract Router is IRouter {
     }
 
     function setGov(address _gov) external onlyGov {
-        gov = _gov;
+        require(_gov != address(0), "Router: invalid address");
+        require(_gov != gov, "Router: same governance");
+        _requestForGov(_gov, type(uint256).max);
+    }
+
+    function setGovWithDeadline(address _gov, uint256 _deadline) external onlyGov {
+        require(_gov != address(0), "Router: invalid address");
+        require(_gov != gov, "Router: same governance");
+        _requestForGov(_gov, _deadline);
+    }
+
+    function acceptGov() external {
+        GovProposal storage proposal = govProposals[msg.sender];
+        require(proposal.deadline > block.timestamp, "Router: deadline expired");
+        require(proposal.isActive == true, "Router: proposal is not active");
+
+        address oldGov = gov;
+        delete govProposals[msg.sender];
+        gov = msg.sender;
+
+        emit GovernanceTransferred(oldGov, msg.sender);
+    }
+
+    function cancelGovProposal(address _gov) external onlyGov {
+        require(govProposals[_gov].isActive, "Router: proposal not active");
+        delete govProposals[_gov];
     }
 
     function addPlugin(address _plugin) external override onlyGov {
         plugins[_plugin] = true;
+        emit PluginAdded(_plugin);
     }
 
     function removePlugin(address _plugin) external onlyGov {
         plugins[_plugin] = false;
+        emit PluginRemoved(_plugin);
     }
 
     function approvePlugin(address _plugin) external {
         approvedPlugins[msg.sender][_plugin] = true;
+        emit PluginApproved(msg.sender, _plugin);
     }
 
     function denyPlugin(address _plugin) external {
         approvedPlugins[msg.sender][_plugin] = false;
+        emit PluginDenied(msg.sender, _plugin);
     }
 
     function pluginTransfer(address _token, address _account, address _receiver, uint256 _amount) external override {
         _validatePlugin(_account);
         IERC20(_token).safeTransferFrom(_account, _receiver, _amount);
+        emit PluginTransfer(msg.sender, _token, _account, _receiver, _amount);
     }
 
-    function pluginIncreasePosition(address _account, address _collateralToken, address _indexToken, uint256 _sizeDelta, bool _isLong) external override {
+    function pluginIncreasePosition(
+        address _account,
+        address _collateralToken,
+        address _indexToken,
+        uint256 _sizeDelta,
+        bool _isLong
+    ) external override {
         _validatePlugin(_account);
         IVault(vault).increasePosition(_account, _collateralToken, _indexToken, _sizeDelta, _isLong);
+        emit PluginIncreasePosition(msg.sender, _account, _collateralToken, _indexToken, _sizeDelta, _isLong);
     }
 
-    function pluginDecreasePosition(address _account, address _collateralToken, address _indexToken, uint256 _collateralDelta, uint256 _sizeDelta, bool _isLong, address _receiver) external override returns (uint256) {
+    function pluginDecreasePosition(
+        address _account,
+        address _collateralToken,
+        address _indexToken,
+        uint256 _collateralDelta,
+        uint256 _sizeDelta,
+        bool _isLong,
+        address _receiver
+    ) external override returns (uint256) {
         _validatePlugin(_account);
-        return IVault(vault).decreasePosition(_account, _collateralToken, _indexToken, _collateralDelta, _sizeDelta, _isLong, _receiver);
+        uint256 amountOut = IVault(vault).decreasePosition(
+            _account, _collateralToken, _indexToken, _collateralDelta, _sizeDelta, _isLong, _receiver
+        );
+        emit PluginDecreasePosition(
+            msg.sender, _account, _collateralToken, _indexToken, _collateralDelta, _sizeDelta, _isLong, _receiver
+        );
+        return amountOut;
     }
 
     function directPoolDeposit(address _token, uint256 _amount) external {
         IERC20(_token).safeTransferFrom(_sender(), vault, _amount);
         IVault(vault).directPoolDeposit(_token);
+        emit DirectPoolDepositCalled(_token, msg.sender, _amount);
     }
 
     function swap(address[] memory _path, uint256 _amountIn, uint256 _minOut, address _receiver) public override {
@@ -98,7 +244,9 @@ contract Router is IRouter {
         emit Swap(msg.sender, _path[0], _path[_path.length - 1], msg.value, amountOut);
     }
 
-    function swapTokensToETH(address[] memory _path, uint256 _amountIn, uint256 _minOut, address payable _receiver) external {
+    function swapTokensToETH(address[] memory _path, uint256 _amountIn, uint256 _minOut, address payable _receiver)
+        external
+    {
         require(_path[_path.length - 1] == weth, "Router: invalid _path");
         IERC20(_path[0]).safeTransferFrom(_sender(), vault, _amountIn);
         uint256 amountOut = _swap(_path, _minOut, address(this));
@@ -106,7 +254,15 @@ contract Router is IRouter {
         emit Swap(msg.sender, _path[0], _path[_path.length - 1], _amountIn, amountOut);
     }
 
-    function increasePosition(address[] memory _path, address _indexToken, uint256 _amountIn, uint256 _minOut, uint256 _sizeDelta, bool _isLong, uint256 _price) external {
+    function increasePosition(
+        address[] memory _path,
+        address _indexToken,
+        uint256 _amountIn,
+        uint256 _minOut,
+        uint256 _sizeDelta,
+        bool _isLong,
+        uint256 _price
+    ) external {
         if (_amountIn > 0) {
             IERC20(_path[0]).safeTransferFrom(_sender(), vault, _amountIn);
         }
@@ -115,9 +271,19 @@ contract Router is IRouter {
             IERC20(_path[_path.length - 1]).safeTransfer(vault, amountOut);
         }
         _increasePosition(_path[_path.length - 1], _indexToken, _sizeDelta, _isLong, _price);
+        emit IncreasePositionCalled(
+            msg.sender, _path[_path.length - 1], _indexToken, _amountIn, _sizeDelta, _isLong, _price
+        );
     }
 
-    function increasePositionETH(address[] memory _path, address _indexToken, uint256 _minOut, uint256 _sizeDelta, bool _isLong, uint256 _price) external payable {
+    function increasePositionETH(
+        address[] memory _path,
+        address _indexToken,
+        uint256 _minOut,
+        uint256 _sizeDelta,
+        bool _isLong,
+        uint256 _price
+    ) external payable {
         require(_path[0] == weth, "Router: invalid _path");
         if (msg.value > 0) {
             _transferETHToVault();
@@ -127,32 +293,97 @@ contract Router is IRouter {
             IERC20(_path[_path.length - 1]).safeTransfer(vault, amountOut);
         }
         _increasePosition(_path[_path.length - 1], _indexToken, _sizeDelta, _isLong, _price);
+        emit IncreasePositionETHCalled(
+            msg.sender, _path[_path.length - 1], _indexToken, msg.value, _sizeDelta, _isLong, _price
+        );
     }
 
-    function decreasePosition(address _collateralToken, address _indexToken, uint256 _collateralDelta, uint256 _sizeDelta, bool _isLong, address _receiver, uint256 _price) external {
+    function decreasePosition(
+        address _collateralToken,
+        address _indexToken,
+        uint256 _collateralDelta,
+        uint256 _sizeDelta,
+        bool _isLong,
+        address _receiver,
+        uint256 _price
+    ) external {
         _decreasePosition(_collateralToken, _indexToken, _collateralDelta, _sizeDelta, _isLong, _receiver, _price);
+        emit DecreasePositionCalled(
+            msg.sender, _collateralToken, _indexToken, _collateralDelta, _sizeDelta, _isLong, _receiver, _price
+        );
     }
 
-    function decreasePositionETH(address _collateralToken, address _indexToken, uint256 _collateralDelta, uint256 _sizeDelta, bool _isLong, address payable _receiver, uint256 _price) external {
-        uint256 amountOut = _decreasePosition(_collateralToken, _indexToken, _collateralDelta, _sizeDelta, _isLong, address(this), _price);
+    function decreasePositionETH(
+        address _collateralToken,
+        address _indexToken,
+        uint256 _collateralDelta,
+        uint256 _sizeDelta,
+        bool _isLong,
+        address payable _receiver,
+        uint256 _price
+    ) external {
+        uint256 amountOut = _decreasePosition(
+            _collateralToken, _indexToken, _collateralDelta, _sizeDelta, _isLong, address(this), _price
+        );
         _transferOutETH(amountOut, _receiver);
+        emit DecreasePositionETHCalled(
+            msg.sender, _collateralToken, _indexToken, _collateralDelta, _sizeDelta, _isLong, _receiver, _price
+        );
     }
 
-    function decreasePositionAndSwap(address[] memory _path, address _indexToken, uint256 _collateralDelta, uint256 _sizeDelta, bool _isLong, address _receiver, uint256 _price, uint256 _minOut) external {
-        uint256 amount = _decreasePosition(_path[0], _indexToken, _collateralDelta, _sizeDelta, _isLong, address(this), _price);
+    function decreasePositionAndSwap(
+        address[] memory _path,
+        address _indexToken,
+        uint256 _collateralDelta,
+        uint256 _sizeDelta,
+        bool _isLong,
+        address _receiver,
+        uint256 _price,
+        uint256 _minOut
+    ) external {
+        uint256 amount =
+            _decreasePosition(_path[0], _indexToken, _collateralDelta, _sizeDelta, _isLong, address(this), _price);
         IERC20(_path[0]).safeTransfer(vault, amount);
         _swap(_path, _minOut, _receiver);
+        emit DecreasePositionAndSwapCalled(
+            msg.sender, _path[0], _indexToken, _collateralDelta, _sizeDelta, _isLong, _receiver, _price, _minOut
+        );
     }
 
-    function decreasePositionAndSwapETH(address[] memory _path, address _indexToken, uint256 _collateralDelta, uint256 _sizeDelta, bool _isLong, address payable _receiver, uint256 _price, uint256 _minOut) external {
+    function decreasePositionAndSwapETH(
+        address[] memory _path,
+        address _indexToken,
+        uint256 _collateralDelta,
+        uint256 _sizeDelta,
+        bool _isLong,
+        address payable _receiver,
+        uint256 _price,
+        uint256 _minOut
+    ) external {
         require(_path[_path.length - 1] == weth, "Router: invalid _path");
-        uint256 amount = _decreasePosition(_path[0], _indexToken, _collateralDelta, _sizeDelta, _isLong, address(this), _price);
+        uint256 amount =
+            _decreasePosition(_path[0], _indexToken, _collateralDelta, _sizeDelta, _isLong, address(this), _price);
         IERC20(_path[0]).safeTransfer(vault, amount);
         uint256 amountOut = _swap(_path, _minOut, address(this));
         _transferOutETH(amountOut, _receiver);
+        emit DecreasePositionAndSwapETHCalled(
+            msg.sender, _path[0], _indexToken, _collateralDelta, _sizeDelta, _isLong, _receiver, _price, _minOut
+        );
     }
 
-    function _increasePosition(address _collateralToken, address _indexToken, uint256 _sizeDelta, bool _isLong, uint256 _price) private {
+    function _requestForGov(address _gov, uint256 _deadline) internal {
+        govProposals[_gov] = GovProposal(_deadline, true);
+
+        emit GovernanceTransferRequested(_gov, _deadline);
+    }
+
+    function _increasePosition(
+        address _collateralToken,
+        address _indexToken,
+        uint256 _sizeDelta,
+        bool _isLong,
+        uint256 _price
+    ) private {
         if (_isLong) {
             require(IVault(vault).getMaxPrice(_indexToken) <= _price, "Router: mark price higher than limit");
         } else {
@@ -162,14 +393,24 @@ contract Router is IRouter {
         IVault(vault).increasePosition(_sender(), _collateralToken, _indexToken, _sizeDelta, _isLong);
     }
 
-    function _decreasePosition(address _collateralToken, address _indexToken, uint256 _collateralDelta, uint256 _sizeDelta, bool _isLong, address _receiver, uint256 _price) private returns (uint256) {
+    function _decreasePosition(
+        address _collateralToken,
+        address _indexToken,
+        uint256 _collateralDelta,
+        uint256 _sizeDelta,
+        bool _isLong,
+        address _receiver,
+        uint256 _price
+    ) private returns (uint256) {
         if (_isLong) {
             require(IVault(vault).getMinPrice(_indexToken) >= _price, "Router: mark price lower than limit");
         } else {
             require(IVault(vault).getMaxPrice(_indexToken) <= _price, "Router: mark price higher than limit");
         }
 
-        return IVault(vault).decreasePosition(_sender(), _collateralToken, _indexToken, _collateralDelta, _sizeDelta, _isLong, _receiver);
+        return IVault(vault).decreasePosition(
+            _sender(), _collateralToken, _indexToken, _collateralDelta, _sizeDelta, _isLong, _receiver
+        );
     }
 
     function _transferETHToVault() private {
@@ -195,14 +436,20 @@ contract Router is IRouter {
         revert("Router: invalid _path.length");
     }
 
-    function _vaultSwap(address _tokenIn, address _tokenOut, uint256 _minOut, address _receiver) private returns (uint256) {
+    function _vaultSwap(address _tokenIn, address _tokenOut, uint256 _minOut, address _receiver)
+        private
+        returns (uint256)
+    {
         uint256 amountOut;
 
-        if (_tokenOut == usdg) { // buyUSDG
+        if (_tokenOut == usdg) {
+            // buyUSDG
             amountOut = IVault(vault).buyUSDG(_tokenIn, _receiver);
-        } else if (_tokenIn == usdg) { // sellUSDG
+        } else if (_tokenIn == usdg) {
+            // sellUSDG
             amountOut = IVault(vault).sellUSDG(_tokenOut, _receiver);
-        } else { // swap
+        } else {
+            // swap
             amountOut = IVault(vault).swap(_tokenIn, _tokenOut, _receiver);
         }
 

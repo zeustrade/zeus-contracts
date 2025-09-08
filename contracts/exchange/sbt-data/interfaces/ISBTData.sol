@@ -9,7 +9,14 @@ import "./components/ISBTDataSwaps.sol";
 import "./components/ISBTDataTrades.sol";
 import "./components/ISBTDataTradingVolume.sol";
 
-interface ISBTData is ISBTDataOrders, ISBTDataPNL, ISBTDataReferrals, ISBTDataSwaps, ISBTDataTrades, ISBTDataTradingVolume {
+interface ISBTData is
+    ISBTDataOrders,
+    ISBTDataPNL,
+    ISBTDataReferrals,
+    ISBTDataSwaps,
+    ISBTDataTrades,
+    ISBTDataTradingVolume
+{
     struct Data {
         uint256 trades;
         uint256 referrals;

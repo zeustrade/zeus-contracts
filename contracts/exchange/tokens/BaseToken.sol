@@ -22,15 +22,15 @@ contract BaseToken is IERC20, IBaseToken {
 
     address public gov;
 
-    mapping (address => uint256) public balances;
-    mapping (address => mapping (address => uint256)) public allowances;
+    mapping(address => uint256) public balances;
+    mapping(address => mapping(address => uint256)) public allowances;
 
     address[] public yieldTrackers;
-    mapping (address => bool) public nonStakingAccounts;
-    mapping (address => bool) public admins;
+    mapping(address => bool) public nonStakingAccounts;
+    mapping(address => bool) public admins;
 
     bool public inPrivateTransferMode;
-    mapping (address => bool) public isHandler;
+    mapping(address => bool) public isHandler;
 
     modifier onlyGov() {
         require(msg.sender == gov, "BaseToken: forbidden");
@@ -145,13 +145,14 @@ contract BaseToken is IERC20, IBaseToken {
             _transfer(_sender, _recipient, _amount);
             return true;
         }
-        uint256 nextAllowance = allowances[_sender][msg.sender].sub(_amount, "BaseToken: transfer amount exceeds allowance");
+        uint256 nextAllowance =
+            allowances[_sender][msg.sender].sub(_amount, "BaseToken: transfer amount exceeds allowance");
         _approve(_sender, msg.sender, nextAllowance);
         _transfer(_sender, _recipient, _amount);
         return true;
     }
 
-    function _mint(address _account, uint256 _amount) internal {
+    function _mint(address _account, uint256 _amount) internal virtual {
         require(_account != address(0), "BaseToken: mint to the zero address");
 
         _updateRewards(_account);
@@ -166,7 +167,7 @@ contract BaseToken is IERC20, IBaseToken {
         emit Transfer(address(0), _account, _amount);
     }
 
-    function _burn(address _account, uint256 _amount) internal {
+    function _burn(address _account, uint256 _amount) internal virtual {
         require(_account != address(0), "BaseToken: burn from the zero address");
 
         _updateRewards(_account);
@@ -181,7 +182,7 @@ contract BaseToken is IERC20, IBaseToken {
         emit Transfer(_account, address(0), _amount);
     }
 
-    function _transfer(address _sender, address _recipient, uint256 _amount) private {
+    function _transfer(address _sender, address _recipient, uint256 _amount) internal virtual {
         require(_sender != address(0), "BaseToken: transfer from the zero address");
         require(_recipient != address(0), "BaseToken: transfer to the zero address");
 
@@ -202,7 +203,7 @@ contract BaseToken is IERC20, IBaseToken {
             nonStakingSupply = nonStakingSupply.add(_amount);
         }
 
-        emit Transfer(_sender, _recipient,_amount);
+        emit Transfer(_sender, _recipient, _amount);
     }
 
     function _approve(address _owner, address _spender, uint256 _amount) private {

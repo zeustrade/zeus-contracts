@@ -87,7 +87,11 @@ contract RewardRouter is ReentrancyGuard, Governable {
         IERC20(_token).safeTransfer(_account, _amount);
     }
 
-    function batchStakeZusForAccount(address[] memory _accounts, uint256[] memory _amounts) external nonReentrant onlyGov {
+    function batchStakeZusForAccount(address[] memory _accounts, uint256[] memory _amounts)
+        external
+        nonReentrant
+        onlyGov
+    {
         address _zus = zus;
         for (uint256 i = 0; i < _accounts.length; i++) {
             _stakeZus(msg.sender, _accounts[i], _zus, _amounts[i]);
@@ -114,11 +118,16 @@ contract RewardRouter is ReentrancyGuard, Governable {
         _unstakeZus(msg.sender, esZus, _amount);
     }
 
-    function mintAndStakeZlp(address _token, uint256 _amount, uint256 _minUsdg, uint256 _minZlp) external nonReentrant returns (uint256) {
+    function mintAndStakeZlp(address _token, uint256 _amount, uint256 _minUsdg, uint256 _minZlp)
+        external
+        nonReentrant
+        returns (uint256)
+    {
         require(_amount > 0, "RewardRouter: invalid _amount");
 
         address account = msg.sender;
-        uint256 zlpAmount = IZlpManager(zlpManager).addLiquidityForAccount(account, account, _token, _amount, _minUsdg, _minZlp);
+        uint256 zlpAmount =
+            IZlpManager(zlpManager).addLiquidityForAccount(account, account, _token, _amount, _minUsdg, _minZlp);
         IRewardTracker(feeZlpTracker).stakeForAccount(account, account, zlp, zlpAmount);
         IRewardTracker(stakedZlpTracker).stakeForAccount(account, account, feeZlpTracker, zlpAmount);
 
@@ -134,7 +143,8 @@ contract RewardRouter is ReentrancyGuard, Governable {
         IERC20(weth).approve(zlpManager, msg.value);
 
         address account = msg.sender;
-        uint256 zlpAmount = IZlpManager(zlpManager).addLiquidityForAccount(address(this), account, weth, msg.value, _minUsdg, _minZlp);
+        uint256 zlpAmount =
+            IZlpManager(zlpManager).addLiquidityForAccount(address(this), account, weth, msg.value, _minUsdg, _minZlp);
 
         IRewardTracker(feeZlpTracker).stakeForAccount(account, account, zlp, zlpAmount);
         IRewardTracker(stakedZlpTracker).stakeForAccount(account, account, feeZlpTracker, zlpAmount);
@@ -144,26 +154,36 @@ contract RewardRouter is ReentrancyGuard, Governable {
         return zlpAmount;
     }
 
-    function unstakeAndRedeemZlp(address _tokenOut, uint256 _zlpAmount, uint256 _minOut, address _receiver) external nonReentrant returns (uint256) {
+    function unstakeAndRedeemZlp(address _tokenOut, uint256 _zlpAmount, uint256 _minOut, address _receiver)
+        external
+        nonReentrant
+        returns (uint256)
+    {
         require(_zlpAmount > 0, "RewardRouter: invalid _zlpAmount");
 
         address account = msg.sender;
         IRewardTracker(stakedZlpTracker).unstakeForAccount(account, feeZlpTracker, _zlpAmount, account);
         IRewardTracker(feeZlpTracker).unstakeForAccount(account, zlp, _zlpAmount, account);
-        uint256 amountOut = IZlpManager(zlpManager).removeLiquidityForAccount(account, _tokenOut, _zlpAmount, _minOut, _receiver);
+        uint256 amountOut =
+            IZlpManager(zlpManager).removeLiquidityForAccount(account, _tokenOut, _zlpAmount, _minOut, _receiver);
 
         emit UnstakeZlp(account, _zlpAmount);
 
         return amountOut;
     }
 
-    function unstakeAndRedeemZlpETH(uint256 _zlpAmount, uint256 _minOut, address payable _receiver) external nonReentrant returns (uint256) {
+    function unstakeAndRedeemZlpETH(uint256 _zlpAmount, uint256 _minOut, address payable _receiver)
+        external
+        nonReentrant
+        returns (uint256)
+    {
         require(_zlpAmount > 0, "RewardRouter: invalid _zlpAmount");
 
         address account = msg.sender;
         IRewardTracker(stakedZlpTracker).unstakeForAccount(account, feeZlpTracker, _zlpAmount, account);
         IRewardTracker(feeZlpTracker).unstakeForAccount(account, zlp, _zlpAmount, account);
-        uint256 amountOut = IZlpManager(zlpManager).removeLiquidityForAccount(account, weth, _zlpAmount, _minOut, address(this));
+        uint256 amountOut =
+            IZlpManager(zlpManager).removeLiquidityForAccount(account, weth, _zlpAmount, _minOut, address(this));
 
         IWETH(weth).withdraw(amountOut);
 
