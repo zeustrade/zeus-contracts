@@ -35,6 +35,7 @@ contract Router is IRouter {
     event Swap(address account, address tokenIn, address tokenOut, uint256 amountIn, uint256 amountOut);
     event GovernanceTransferRequested(address indexed newGov, uint256 deadline);
     event GovernanceTransferred(address indexed oldGov, address indexed newGov);
+    event GovProposalCanceled(address indexed proposedGov, address indexed canceledBy);
     event PluginAdded(address indexed plugin);
     event PluginRemoved(address indexed plugin);
     event PluginApproved(address indexed account, address indexed plugin);
@@ -166,6 +167,7 @@ contract Router is IRouter {
     function cancelGovProposal(address _gov) external onlyGov {
         require(govProposals[_gov].isActive, "Router: proposal not active");
         delete govProposals[_gov];
+        emit GovProposalCanceled(_gov, msg.sender);
     }
 
     function addPlugin(address _plugin) external override onlyGov {

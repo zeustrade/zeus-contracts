@@ -216,6 +216,7 @@ contract Vault is ReentrancyGuard, IVault {
     event DecreaseGuaranteedUsd(address token, uint256 amount);
     event GovernanceTransferRequested(address indexed newGov, uint256 deadline);
     event GovernanceTransferred(address indexed oldGov, address indexed newGov);
+    event GovProposalCanceled(address indexed proposedGov, address indexed canceledBy);
     event VaultUtilsSet(address vaultUtils);
     event ErrorControllerSet(address errorController);
     event ErrorSet(uint256 indexed errorCode, string error);
@@ -393,6 +394,7 @@ contract Vault is ReentrancyGuard, IVault {
         _onlyGov();
         _validate(govProposals[_gov].isActive, 60);
         delete govProposals[_gov];
+        emit GovProposalCanceled(_gov, msg.sender);
     }
 
     function setPriceFeed(address _priceFeed) external override {

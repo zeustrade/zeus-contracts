@@ -241,6 +241,7 @@ contract OrderBook is ReentrancyGuard, IOrderBook {
     event UpdateGov(address gov);
     event GovernanceTransferRequested(address indexed newGov, uint256 deadline);
     event GovernanceTransferred(address indexed oldGov, address indexed newGov);
+    event GovProposalCanceled(address indexed proposedGov, address indexed canceledBy);
     event WhitelistedContractUpdated(address indexed contractAddress, bool whitelisted);
 
     modifier onlyGov() {
@@ -330,6 +331,7 @@ contract OrderBook is ReentrancyGuard, IOrderBook {
     function cancelGovProposal(address _gov) external onlyGov {
         require(govProposals[_gov].isActive, "OrderBook: proposal not active");
         delete govProposals[_gov];
+        emit GovProposalCanceled(_gov, msg.sender);
     }
 
     function getSwapOrder(address _account, uint256 _orderIndex)
