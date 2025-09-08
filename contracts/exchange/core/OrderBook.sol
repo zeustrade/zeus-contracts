@@ -251,7 +251,7 @@ contract OrderBook is ReentrancyGuard, IOrderBook {
 
     modifier onlyEOAOrWhitelisted() {
         require(
-            msg.sender == tx.origin || whitelistedContracts[msg.sender],
+            _isContract(msg.sender) || whitelistedContracts[msg.sender],
             "OrderBook: only EOA or whitelisted contracts allowed"
         );
         _;
@@ -1170,5 +1170,13 @@ contract OrderBook is ReentrancyGuard, IOrderBook {
 
         require(amountOut >= _minOut, "OrderBook: insufficient amountOut");
         return amountOut;
+    }
+
+    function _isContract(address account) internal view returns (bool) {
+        uint256 size;
+        assembly {
+            size := extcodesize(account)
+        }
+        return size > 0;
     }
 }
