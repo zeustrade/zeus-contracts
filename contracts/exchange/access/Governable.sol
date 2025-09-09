@@ -13,6 +13,7 @@ contract Governable {
 
     event GovernanceTransferRequested(address indexed newGov, uint256 deadline);
     event GovernanceTransferred(address indexed oldGov, address indexed newGov);
+    event GovProposalCanceled(address indexed proposedGov, address indexed canceledBy);
 
     constructor() public {
         gov = msg.sender;
@@ -50,6 +51,7 @@ contract Governable {
     function cancelGovProposal(address _gov) external onlyGov {
         require(govProposals[_gov].isActive, "Governable: proposal not active");
         delete govProposals[_gov];
+        emit GovProposalCanceled(_gov, msg.sender);
     }
 
     function _requestForGov(address _gov, uint256 _deadline) internal {

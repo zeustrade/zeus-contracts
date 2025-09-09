@@ -70,6 +70,7 @@ contract VaultPriceFeed is IVaultPriceFeed {
 
     event GovernanceTransferRequested(address indexed newGov, uint256 deadline);
     event GovernanceTransferred(address indexed oldGov, address indexed newGov);
+    event GovProposalCanceled(address indexed proposedGov, address indexed canceledBy);
     event ChainlinkFlagsSet(address chainlinkFlags);
     event AdjustmentSet(address indexed token, bool isAdditive, uint256 adjustmentBps);
     event UseV2PricingSet(bool useV2Pricing);
@@ -116,6 +117,7 @@ contract VaultPriceFeed is IVaultPriceFeed {
     function cancelGovProposal(address _gov) external onlyGov {
         require(govProposals[_gov].isActive, "VaultPriceFeed: proposal not active");
         delete govProposals[_gov];
+        emit GovProposalCanceled(_gov, msg.sender);
     }
 
     function setChainlinkFlags(address _chainlinkFlags) external onlyGov {

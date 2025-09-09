@@ -125,10 +125,23 @@ contract ZLP is MintableBaseToken, IZLP {
         CooldownInfo[] storage cooldowns = userCooldowns[_account];
         uint256 totalUnfrozen = 0;
 
-        for (uint256 i = 0; i < cooldowns.length; i++) {
-            if (cooldowns[i].releaseTime <= block.timestamp && cooldowns[i].amount > 0) {
-                totalUnfrozen = totalUnfrozen.add(cooldowns[i].amount);
-                cooldowns[i].amount = 0;
+        uint256 i = 0;
+        while (i < cooldowns.length) {
+            CooldownInfo storage info = cooldowns[i];
+            bool isExpired = info.releaseTime <= block.timestamp;
+
+            if (isExpired && info.amount > 0) {
+                totalUnfrozen = totalUnfrozen.add(info.amount);
+            }
+
+            if (isExpired || info.amount == 0) {
+                uint256 lastIndex = cooldowns.length - 1;
+                if (i != lastIndex) {
+                    cooldowns[i] = cooldowns[lastIndex];
+                }
+                cooldowns.pop();
+            } else {
+                i++;
             }
         }
 
