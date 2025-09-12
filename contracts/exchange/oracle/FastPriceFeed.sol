@@ -9,7 +9,7 @@ import "../core/interfaces/IVaultPriceFeed.sol";
 import "../core/interfaces/IPositionRouter.sol";
 import "../access/Governable.sol";
 
-pragma solidity 0.6.12;
+pragma solidity ^0.6.12;
 
 contract FastPriceFeed is ISecondaryPriceFeed, IFastPriceFeed, Governable {
     using SafeMath for uint256;
@@ -159,7 +159,7 @@ contract FastPriceFeed is ISecondaryPriceFeed, IFastPriceFeed, Governable {
 
     function setVaultPriceFeed(address _vaultPriceFeed) external override onlyGov {
         vaultPriceFeed = _vaultPriceFeed;
-    }
+    } 
 
     function setMaxTimeDeviation(uint256 _maxTimeDeviation) external onlyGov {
         maxTimeDeviation = _maxTimeDeviation;
