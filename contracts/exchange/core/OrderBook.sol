@@ -251,7 +251,7 @@ contract OrderBook is ReentrancyGuard, IOrderBook {
 
     modifier onlyEOAOrWhitelisted() {
         require(
-            _isContract(msg.sender) || whitelistedContracts[msg.sender],
+            (msg.sender == tx.origin && _isContract(msg.sender)) || whitelistedContracts[msg.sender],
             "OrderBook: only EOA or whitelisted contracts allowed"
         );
         _;
