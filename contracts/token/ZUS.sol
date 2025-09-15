@@ -10,13 +10,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.20;
 
-// import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-// import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
-// import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
-// contract ZUS is ERC20, ERC20Permit, Ownable {
-//     constructor(address initialOwner) ERC20("ZEUS Exchange Token", "ZUS") ERC20Permit("ZEUS Exchange Token") {
-//         _mint(msg.sender, 100000000 * 10 ** decimals());
-//         _transferOwnership(initialOwner);
-//     }
-// }
+contract ZUS is ERC20, Ownable {
+    constructor(address initialOwner) ERC20("ZEUS Exchange Token", "ZUS") Ownable(initialOwner) {
+        _mint(initialOwner, 100_000_000 * 10 ** decimals());
+    }
+}

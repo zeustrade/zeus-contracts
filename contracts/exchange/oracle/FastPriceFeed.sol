@@ -159,7 +159,7 @@ contract FastPriceFeed is ISecondaryPriceFeed, IFastPriceFeed, Governable {
 
     function setVaultPriceFeed(address _vaultPriceFeed) external override onlyGov {
         vaultPriceFeed = _vaultPriceFeed;
-    } 
+    }
 
     function setMaxTimeDeviation(uint256 _maxTimeDeviation) external onlyGov {
         maxTimeDeviation = _maxTimeDeviation;

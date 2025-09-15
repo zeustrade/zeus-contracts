@@ -45,7 +45,6 @@ contract StakedZlpMigrator is Governable {
         require(_sender != address(0), "StakedZlpMigrator: transfer from the zero address");
         require(_recipient != address(0), "StakedZlpMigrator: transfer to the zero address");
 
-        // Unstake to this contract then restake for recipient, mirroring new logic
         IRewardTracker(stakedZlpTracker).unstakeForAccount(_sender, feeZlpTracker, _amount, address(this));
         IERC20(feeZlpTracker).transfer(_sender, _amount);
         IRewardTracker(feeZlpTracker).unstakeForAccount(_sender, zlp, _amount, address(this));

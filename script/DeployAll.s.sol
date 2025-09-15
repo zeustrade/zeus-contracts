@@ -252,7 +252,7 @@ contract DeployAll is Script {
 
         // OrderBook
         orderBook.initialize(
-            address(router), address(vault), weth, address(usdg), 100000000000000, 10000000000000000000000000000000
+            address(router), address(vault), weth, address(usdg), 180000000000000, 10000000000000000000000000000000
         );
 
         // ShortsTracker/PositionRouter/Manager
@@ -361,7 +361,9 @@ contract DeployAll is Script {
 
         // Router plugins
         router.addPlugin(address(positionRouter));
+        router.addPlugin(address(orderBook));
         router.approvePlugin(address(positionRouter));
+        router.approvePlugin(address(orderBook));
 
         // Referral tiers
         referralStorage.setTier(0, 0, 3000);
