@@ -37,9 +37,11 @@ contract ZlpBalance {
     }
 
     function transferFrom(address _sender, address _recipient, uint256 _amount) external returns (bool) {
-        uint256 nextAllowance =
-            allowances[_sender][msg.sender].sub(_amount, "ZlpBalance: transfer amount exceeds allowance");
-        _approve(_sender, msg.sender, nextAllowance);
+        if (allowances[_sender][msg.sender] != type(uint256).max) {
+            uint256 nextAllowance =
+                allowances[_sender][msg.sender].sub(_amount, "ZlpBalance: transfer amount exceeds allowance");
+            _approve(_sender, msg.sender, nextAllowance);
+        }
         _transfer(_sender, _recipient, _amount);
         return true;
     }

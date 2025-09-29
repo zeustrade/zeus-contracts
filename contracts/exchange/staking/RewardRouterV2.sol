@@ -80,8 +80,21 @@ contract RewardRouterV2 is IRewardRouterV2, ReentrancyGuard, Governable {
     }
 
     // to help users who accidentally send their tokens to this contract
-    function withdrawToken(address _token, address _account, uint256 _amount) external onlyGov {
-        IERC20(_token).safeTransfer(_account, _amount);
+    function withdrawTokensOrETH(address _tokenOrZero, address _account, uint256 _amount)
+        external
+        onlyGov
+        nonReentrant
+    {
+        if (_tokenOrZero == address(0)) {
+            // Withdraw ETH
+            require(_account != address(0), "Invalid account");
+            require(_amount <= address(this).balance, "Insufficient ETH balance");
+            (bool success,) = payable(_account).call{value: _amount}("");
+            require(success, "ETH transfer failed");
+        } else {
+            // Withdraw ERC20
+            IERC20(_tokenOrZero).safeTransfer(_account, _amount);
+        }
     }
 
     function batchStakeZusForAccount(address[] memory _accounts, uint256[] memory _amounts)
@@ -199,20 +212,16 @@ contract RewardRouterV2 is IRewardRouterV2, ReentrancyGuard, Governable {
     }
 
     function claim() external nonReentrant {
-        address account = msg.sender;
+        _claimFees();
+        _claimEsZus();
+    }
 
-        // IRewardTracker(feeZusTracker).claimForAccount(account, account);
-        IRewardTracker(feeZlpTracker).claimForAccount(account, account);
-
-        IRewardTracker(stakedZusTracker).claimForAccount(account, account);
-        IRewardTracker(stakedZlpTracker).claimForAccount(account, account);
+    function claimEsZus() external nonReentrant {
+        _claimEsZus();
     }
 
     function claimFees() external nonReentrant {
-        address account = msg.sender;
-
-        // IRewardTracker(feeZusTracker).claimForAccount(account, account);
-        IRewardTracker(feeZlpTracker).claimForAccount(account, account);
+        _claimFees();
     }
 
     // function compound() external nonReentrant {
@@ -225,7 +234,7 @@ contract RewardRouterV2 is IRewardRouterV2, ReentrancyGuard, Governable {
 
     function handleRewards(
         // bool _shouldStakeMultiplierPoints,
-        bool _shouldClaimWeth,
+        // bool _shouldClaimWeth,
         bool _shouldConvertWethToEth
     ) external nonReentrant {
         address account = msg.sender;
@@ -237,20 +246,19 @@ contract RewardRouterV2 is IRewardRouterV2, ReentrancyGuard, Governable {
         //     }
         // }
 
-        if (_shouldClaimWeth) {
-            if (_shouldConvertWethToEth) {
-                // uint256 weth0 = IRewardTracker(feeZusTracker).claimForAccount(account, address(this));
-                uint256 weth1 = IRewardTracker(feeZlpTracker).claimForAccount(account, address(this));
+        // WETH claiming is always performed
+        if (_shouldConvertWethToEth) {
+            // uint256 weth0 = IRewardTracker(feeZusTracker).claimForAccount(account, address(this));
+            uint256 weth1 = IRewardTracker(feeZlpTracker).claimForAccount(account, address(this));
 
-                // uint256 wethAmount = weth0.add(weth1);
-                // IWETH(weth).withdraw(wethAmount);
-                IWETH(weth).withdraw(weth1);
+            // uint256 wethAmount = weth0.add(weth1);
+            // IWETH(weth).withdraw(wethAmount);
+            IWETH(weth).withdraw(weth1);
 
-                payable(account).sendValue(weth1);
-            } else {
-                // IRewardTracker(feeZusTracker).claimForAccount(account, account);
-                IRewardTracker(feeZlpTracker).claimForAccount(account, account);
-            }
+            payable(account).sendValue(weth1);
+        } else {
+            // IRewardTracker(feeZusTracker).claimForAccount(account, account);
+            _claimFees();
         }
     }
 
@@ -275,7 +283,7 @@ contract RewardRouterV2 is IRewardRouterV2, ReentrancyGuard, Governable {
         _validateReceiver(receiver);
         // _compound(_sender);
 
-        uint256 stakedZus = IRewardTracker(stakedZusTracker).depositBalances(_sender, zus);
+        uint256 stakedZus = IRewardTracker(stakedZusTracker).depositedBalances(_sender, zus);
         if (stakedZus > 0) {
             // move stake using this contract as intermediate to avoid assumptions
             IRewardTracker(stakedZusTracker).unstakeForAccount(_sender, zus, stakedZus, address(this));
@@ -290,7 +298,7 @@ contract RewardRouterV2 is IRewardRouterV2, ReentrancyGuard, Governable {
         //     IRewardTracker(feeZusTracker).stakeForAccount(_sender, receiver, bnZus, stakedBnZus);
         // }
 
-        uint256 zlpAmount = IRewardTracker(feeZlpTracker).depositBalances(_sender, zlp);
+        uint256 zlpAmount = IRewardTracker(feeZlpTracker).depositedBalances(_sender, zlp);
         if (zlpAmount > 0) {
             // unstake to this contract, then restake for receiver mirroring new logic
             IRewardTracker(stakedZlpTracker).unstakeForAccount(_sender, feeZlpTracker, zlpAmount, address(this));
@@ -303,6 +311,20 @@ contract RewardRouterV2 is IRewardRouterV2, ReentrancyGuard, Governable {
             IRewardTracker(stakedZlpTracker).stakeForAccount(address(this), receiver, feeZlpTracker, zlpAmount);
             IERC20(stakedZlpTracker).transfer(receiver, zlpAmount);
         }
+    }
+
+    function _claimFees() private {
+        address account = msg.sender;
+
+        // IRewardTracker(feeZusTracker).claimForAccount(account, account);
+        IRewardTracker(feeZlpTracker).claimForAccount(account, account);
+    }
+
+    function _claimEsZus() private {
+        address account = msg.sender;
+
+        IRewardTracker(stakedZusTracker).claimForAccount(account, account);
+        IRewardTracker(stakedZlpTracker).claimForAccount(account, account);
     }
 
     function _validateReceiver(address _receiver) private view {

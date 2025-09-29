@@ -44,7 +44,7 @@ contract StakeManagerTest is DeployAll {
         vm.stopPrank();
         vm.prank(admin);
         stakeManager.stakeForAccount(address(stakedZusTracker), alice, address(zus), amount);
-        assertEq(stakedZusTracker.depositBalances(alice, address(zus)), amount);
+        assertEq(stakedZusTracker.depositedBalances(alice, address(zus)), amount);
         assertEq(stakedZusTracker.stakedAmounts(alice), amount);
     }
 }

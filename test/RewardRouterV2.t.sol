@@ -39,8 +39,8 @@ contract RewardRouterV2Test is DeployAll {
         collateralToken.approve(address(rewardRouter), uint256(-1));
         uint256 minted = rewardRouter.mintAndStakeZlp(address(collateralToken), depositAmount, 0, 0);
         assertGt(minted, 0);
-        assertEq(IRewardTracker(feeZlpTracker).depositBalances(user, address(zlp)), minted);
-        assertEq(IRewardTracker(stakedZlpTracker).depositBalances(user, address(feeZlpTracker)), minted);
+        assertEq(IRewardTracker(feeZlpTracker).depositedBalances(user, address(zlp)), minted);
+        assertEq(IRewardTracker(stakedZlpTracker).depositedBalances(user, address(feeZlpTracker)), minted);
         vm.stopPrank();
     }
 
@@ -66,7 +66,7 @@ contract RewardRouterV2Test is DeployAll {
         vm.warp(block.timestamp + 1 hours);
         uint256 wethBefore = weth.balanceOf(user);
         vm.prank(user);
-        rewardRouter.handleRewards(true, false);
+        rewardRouter.handleRewards(false);
         assertGt(weth.balanceOf(user), wethBefore);
     }
 
@@ -78,7 +78,7 @@ contract RewardRouterV2Test is DeployAll {
         uint256 ethBefore = user.balance;
         uint256 wethBefore = weth.balanceOf(user);
         vm.prank(user);
-        rewardRouter.handleRewards(true, true);
+        rewardRouter.handleRewards(true);
         assertGt(user.balance, ethBefore);
         assertEq(weth.balanceOf(user), wethBefore);
     }
@@ -103,13 +103,13 @@ contract RewardRouterV2Test is DeployAll {
         vm.prank(receiver);
         rewardRouter.acceptTransfer(user);
 
-        assertEq(IRewardTracker(stakedZusTracker).depositBalances(user, address(zus)), 0);
-        assertEq(IRewardTracker(feeZlpTracker).depositBalances(user, address(zlp)), 0);
-        assertEq(IRewardTracker(stakedZlpTracker).depositBalances(user, address(feeZlpTracker)), 0);
+        assertEq(IRewardTracker(stakedZusTracker).depositedBalances(user, address(zus)), 0);
+        assertEq(IRewardTracker(feeZlpTracker).depositedBalances(user, address(zlp)), 0);
+        assertEq(IRewardTracker(stakedZlpTracker).depositedBalances(user, address(feeZlpTracker)), 0);
 
-        assertEq(IRewardTracker(stakedZusTracker).depositBalances(receiver, address(zus)), zusAmount);
-        assertEq(IRewardTracker(feeZlpTracker).depositBalances(receiver, address(zlp)), minted);
-        assertEq(IRewardTracker(stakedZlpTracker).depositBalances(receiver, address(feeZlpTracker)), minted);
+        assertEq(IRewardTracker(stakedZusTracker).depositedBalances(receiver, address(zus)), zusAmount);
+        assertEq(IRewardTracker(feeZlpTracker).depositedBalances(receiver, address(zlp)), minted);
+        assertEq(IRewardTracker(stakedZlpTracker).depositedBalances(receiver, address(feeZlpTracker)), minted);
     }
 
     function testWithdrawToken() public {
@@ -120,7 +120,7 @@ contract RewardRouterV2Test is DeployAll {
         randomToken.transfer(address(rewardRouter), amount);
         uint256 balanceBefore = randomToken.balanceOf(user);
         vm.prank(admin);
-        rewardRouter.withdrawToken(address(randomToken), user, amount);
+        rewardRouter.withdrawTokensOrETH(address(randomToken), user, amount);
         uint256 balanceAfter = randomToken.balanceOf(user);
         assertEq(balanceAfter, balanceBefore + amount);
     }
@@ -132,10 +132,10 @@ contract RewardRouterV2Test is DeployAll {
         vm.startPrank(user);
         zus.approve(address(stakedZusTracker), uint256(-1));
         rewardRouter.stakeZus(amount);
-        assertEq(IRewardTracker(stakedZusTracker).depositBalances(user, address(zus)), amount);
+        assertEq(IRewardTracker(stakedZusTracker).depositedBalances(user, address(zus)), amount);
         uint256 unstakeAmount = 40e18;
         rewardRouter.unstakeZus(unstakeAmount);
-        assertEq(IRewardTracker(stakedZusTracker).depositBalances(user, address(zus)), amount - unstakeAmount);
+        assertEq(IRewardTracker(stakedZusTracker).depositedBalances(user, address(zus)), amount - unstakeAmount);
         vm.stopPrank();
     }
 
@@ -145,16 +145,18 @@ contract RewardRouterV2Test is DeployAll {
         vm.startPrank(user);
         uint256 minted = rewardRouter.mintAndStakeZlpETH{value: ethAmount}(0, 0);
         assertGt(minted, 0);
-        assertEq(IRewardTracker(feeZlpTracker).depositBalances(user, address(zlp)), minted);
-        assertEq(IRewardTracker(stakedZlpTracker).depositBalances(user, address(feeZlpTracker)), minted);
+        assertEq(IRewardTracker(feeZlpTracker).depositedBalances(user, address(zlp)), minted);
+        assertEq(IRewardTracker(stakedZlpTracker).depositedBalances(user, address(feeZlpTracker)), minted);
         vm.warp(block.timestamp + COOLDOWN_DURATION + 1);
         uint256 userBalBefore = weth.balanceOf(user);
         uint256 redeemAmount = minted / 2;
         uint256 out = rewardRouter.unstakeAndRedeemZlp(address(weth), redeemAmount, 0, user);
         assertGt(out, 0);
         assertEq(weth.balanceOf(user), userBalBefore + out);
-        assertEq(IRewardTracker(feeZlpTracker).depositBalances(user, address(zlp)), minted - redeemAmount);
-        assertEq(IRewardTracker(stakedZlpTracker).depositBalances(user, address(feeZlpTracker)), minted - redeemAmount);
+        assertEq(IRewardTracker(feeZlpTracker).depositedBalances(user, address(zlp)), minted - redeemAmount);
+        assertEq(
+            IRewardTracker(stakedZlpTracker).depositedBalances(user, address(feeZlpTracker)), minted - redeemAmount
+        );
         vm.stopPrank();
     }
 

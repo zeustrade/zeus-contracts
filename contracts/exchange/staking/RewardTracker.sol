@@ -27,7 +27,7 @@ contract RewardTracker is IERC20, ReentrancyGuard, IRewardTracker, Governable {
 
     address public distributor;
     mapping(address => bool) public isDepositToken;
-    mapping(address => mapping(address => uint256)) public override depositBalances;
+    mapping(address => mapping(address => uint256)) public override depositedBalances;
     mapping(address => uint256) public totalDepositSupply;
 
     uint256 public override totalSupply;
@@ -86,8 +86,21 @@ contract RewardTracker is IERC20, ReentrancyGuard, IRewardTracker, Governable {
     }
 
     // to help users who accidentally send their tokens to this contract
-    function withdrawToken(address _token, address _account, uint256 _amount) external onlyGov {
-        IERC20(_token).safeTransfer(_account, _amount);
+    function withdrawTokensOrETH(address _tokenOrZero, address _account, uint256 _amount)
+        external
+        onlyGov
+        nonReentrant
+    {
+        if (_tokenOrZero == address(0)) {
+            // Withdraw ETH
+            require(_account != address(0), "Invalid account");
+            require(_amount <= address(this).balance, "Insufficient ETH balance");
+            (bool success,) = payable(_account).call{value: _amount}("");
+            require(success, "ETH transfer failed");
+        } else {
+            // Withdraw ERC20
+            IERC20(_tokenOrZero).safeTransfer(_account, _amount);
+        }
     }
 
     function balanceOf(address _account) external view override returns (uint256) {
@@ -250,7 +263,7 @@ contract RewardTracker is IERC20, ReentrancyGuard, IRewardTracker, Governable {
         _updateRewards(_account);
 
         stakedAmounts[_account] = stakedAmounts[_account].add(_amount);
-        depositBalances[_account][_depositToken] = depositBalances[_account][_depositToken].add(_amount);
+        depositedBalances[_account][_depositToken] = depositedBalances[_account][_depositToken].add(_amount);
         totalDepositSupply[_depositToken] = totalDepositSupply[_depositToken].add(_amount);
 
         _mint(_fundingAccount, _amount);
@@ -267,9 +280,9 @@ contract RewardTracker is IERC20, ReentrancyGuard, IRewardTracker, Governable {
 
         stakedAmounts[_account] = stakedAmount.sub(_amount);
 
-        uint256 depositBalance = depositBalances[_account][_depositToken];
-        require(depositBalance >= _amount, "RewardTracker: _amount exceeds depositBalance");
-        depositBalances[_account][_depositToken] = depositBalance.sub(_amount);
+        uint256 depositedBalance = depositedBalances[_account][_depositToken];
+        require(depositedBalance >= _amount, "RewardTracker: _amount exceeds depositedBalance");
+        depositedBalances[_account][_depositToken] = depositedBalance.sub(_amount);
         totalDepositSupply[_depositToken] = totalDepositSupply[_depositToken].sub(_amount);
 
         _burn(_account, _amount);
@@ -277,11 +290,17 @@ contract RewardTracker is IERC20, ReentrancyGuard, IRewardTracker, Governable {
     }
 
     function _updateRewards(address _account) private {
+        uint256 supply = totalSupply;
+
+        // If there is no supply, do not pull rewards from the distributor to avoid trapping tokens
+        if (supply == 0) {
+            return;
+        }
+
         uint256 blockReward = IRewardDistributor(distributor).distribute();
 
-        uint256 supply = totalSupply;
         uint256 _cumulativeRewardPerToken = cumulativeRewardPerToken;
-        if (supply > 0 && blockReward > 0) {
+        if (blockReward > 0) {
             _cumulativeRewardPerToken = _cumulativeRewardPerToken.add(blockReward.mul(PRECISION).div(supply));
             cumulativeRewardPerToken = _cumulativeRewardPerToken;
         }
@@ -302,7 +321,7 @@ contract RewardTracker is IERC20, ReentrancyGuard, IRewardTracker, Governable {
             claimableReward[_account] = _claimableReward;
             previousCumulatedRewardPerToken[_account] = _cumulativeRewardPerToken;
 
-            if (_claimableReward > 0 && stakedAmounts[_account] > 0) {
+            if (_claimableReward > 0 && stakedAmount > 0) {
                 uint256 nextCumulativeReward = cumulativeRewards[_account].add(accountReward);
 
                 averageStakedAmounts[_account] = averageStakedAmounts[_account].mul(cumulativeRewards[_account]).div(

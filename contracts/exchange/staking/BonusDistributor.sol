@@ -45,8 +45,21 @@ contract BonusDistributor is IRewardDistributor, ReentrancyGuard, Governable {
     }
 
     // to help users who accidentally send their tokens to this contract
-    function withdrawToken(address _token, address _account, uint256 _amount) external onlyGov {
-        IERC20(_token).safeTransfer(_account, _amount);
+    function withdrawTokensOrETH(address _tokenOrZero, address _account, uint256 _amount)
+        external
+        onlyGov
+        nonReentrant
+    {
+        if (_tokenOrZero == address(0)) {
+            // Withdraw ETH
+            require(_account != address(0), "Invalid account");
+            require(_amount <= address(this).balance, "Insufficient ETH balance");
+            (bool success,) = payable(_account).call{value: _amount}("");
+            require(success, "ETH transfer failed");
+        } else {
+            // Withdraw ERC20
+            IERC20(_tokenOrZero).safeTransfer(_account, _amount);
+        }
     }
 
     function updateLastDistributionTime() external onlyAdmin {
@@ -72,8 +85,11 @@ contract BonusDistributor is IRewardDistributor, ReentrancyGuard, Governable {
 
         uint256 supply = IERC20(rewardTracker).totalSupply();
         uint256 timeDiff = block.timestamp.sub(lastDistributionTime);
+        uint256 theoretical =
+            timeDiff.mul(supply).mul(bonusMultiplierBasisPoints).div(BASIS_POINTS_DIVISOR).div(BONUS_DURATION);
+        uint256 balance = IERC20(rewardToken).balanceOf(address(this));
 
-        return timeDiff.mul(supply).mul(bonusMultiplierBasisPoints).div(BASIS_POINTS_DIVISOR).div(BONUS_DURATION);
+        return theoretical > balance ? balance : theoretical;
     }
 
     function distribute() external override returns (uint256) {

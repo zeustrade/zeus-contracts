@@ -24,6 +24,7 @@ contract RewardDistributor is IRewardDistributor, ReentrancyGuard, Governable {
 
     event Distribute(uint256 amount);
     event TokensPerIntervalChange(uint256 amount);
+    // event lastDistributionTimeUpdated(uint256 timestamp);
 
     modifier onlyAdmin() {
         require(msg.sender == admin, "RewardDistributor: forbidden");
@@ -41,8 +42,21 @@ contract RewardDistributor is IRewardDistributor, ReentrancyGuard, Governable {
     }
 
     // to help users who accidentally send their tokens to this contract
-    function withdrawToken(address _token, address _account, uint256 _amount) external onlyGov {
-        IERC20(_token).safeTransfer(_account, _amount);
+    function withdrawTokensOrETH(address _tokenOrZero, address _account, uint256 _amount)
+        external
+        onlyGov
+        nonReentrant
+    {
+        if (_tokenOrZero == address(0)) {
+            // Withdraw ETH
+            require(_account != address(0), "Invalid account");
+            require(_amount <= address(this).balance, "Insufficient ETH balance");
+            (bool success,) = payable(_account).call{value: _amount}("");
+            require(success, "ETH transfer failed");
+        } else {
+            // Withdraw ERC20
+            IERC20(_tokenOrZero).safeTransfer(_account, _amount);
+        }
     }
 
     function updateLastDistributionTime() external onlyAdmin {
@@ -64,6 +78,13 @@ contract RewardDistributor is IRewardDistributor, ReentrancyGuard, Governable {
         uint256 timeDiff = block.timestamp.sub(lastDistributionTime);
         return tokensPerInterval.mul(timeDiff);
     }
+
+    // function updateLastDistributionTime() external {
+    //     require(msg.sender == rewardTracker, "RewardDistributor: invalid msg.sender");
+    //     lastDistributionTime = block.timestamp;
+
+    //     emit lastDistributionTimeUpdated(block.timestamp);
+    // }
 
     function distribute() external override returns (uint256) {
         require(msg.sender == rewardTracker, "RewardDistributor: invalid msg.sender");

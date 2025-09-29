@@ -83,8 +83,21 @@ contract RewardRouter is ReentrancyGuard, Governable {
     }
 
     // to help users who accidentally send their tokens to this contract
-    function withdrawToken(address _token, address _account, uint256 _amount) external onlyGov {
-        IERC20(_token).safeTransfer(_account, _amount);
+    function withdrawTokensOrETH(address _tokenOrZero, address _account, uint256 _amount)
+        external
+        onlyGov
+        nonReentrant
+    {
+        if (_tokenOrZero == address(0)) {
+            // Withdraw ETH
+            require(_account != address(0), "Invalid account");
+            require(_amount <= address(this).balance, "Insufficient ETH balance");
+            (bool success,) = payable(_account).call{value: _amount}("");
+            require(success, "ETH transfer failed");
+        } else {
+            // Withdraw ERC20
+            IERC20(_tokenOrZero).safeTransfer(_account, _amount);
+        }
     }
 
     function batchStakeZusForAccount(address[] memory _accounts, uint256[] memory _amounts)
@@ -280,7 +293,7 @@ contract RewardRouter is ReentrancyGuard, Governable {
             IRewardTracker(feeZusTracker).stakeForAccount(_account, _account, bnZus, bnZusAmount);
         }
 
-        uint256 stakedBnZus = IRewardTracker(feeZusTracker).depositBalances(_account, bnZus);
+        uint256 stakedBnZus = IRewardTracker(feeZusTracker).depositedBalances(_account, bnZus);
         if (stakedBnZus > 0) {
             uint256 reductionAmount = stakedBnZus.mul(_amount).div(balance);
             IRewardTracker(feeZusTracker).unstakeForAccount(_account, bnZus, reductionAmount, _account);

@@ -34,21 +34,21 @@ contract StakedZlpMigratorTest is DeployAll {
         uint256 minted = _mintAndStakeZlpETH(user, 2 ether);
         assertGt(minted, 0);
 
-        uint256 amount = feeZlpTracker.depositBalances(user, address(zlp)) / 2;
+        uint256 amount = feeZlpTracker.depositedBalances(user, address(zlp)) / 2;
         assertGt(amount, 0);
 
-        uint256 senderFeeBefore = feeZlpTracker.depositBalances(user, address(zlp));
-        uint256 senderStakedBefore = stakedZlpTracker.depositBalances(user, address(feeZlpTracker));
-        uint256 recvFeeBefore = feeZlpTracker.depositBalances(receiver, address(zlp));
-        uint256 recvStakedBefore = stakedZlpTracker.depositBalances(receiver, address(feeZlpTracker));
+        uint256 senderFeeBefore = feeZlpTracker.depositedBalances(user, address(zlp));
+        uint256 senderStakedBefore = stakedZlpTracker.depositedBalances(user, address(feeZlpTracker));
+        uint256 recvFeeBefore = feeZlpTracker.depositedBalances(receiver, address(zlp));
+        uint256 recvStakedBefore = stakedZlpTracker.depositedBalances(receiver, address(feeZlpTracker));
 
         vm.prank(admin);
         migrator.transfer(receiver, amount);
 
-        assertEq(feeZlpTracker.depositBalances(user, address(zlp)), senderFeeBefore - amount);
-        assertEq(stakedZlpTracker.depositBalances(user, address(feeZlpTracker)), senderStakedBefore - amount);
-        assertEq(feeZlpTracker.depositBalances(receiver, address(zlp)), recvFeeBefore + amount);
-        assertEq(stakedZlpTracker.depositBalances(receiver, address(feeZlpTracker)), recvStakedBefore + amount);
+        assertEq(feeZlpTracker.depositedBalances(user, address(zlp)), senderFeeBefore - amount);
+        assertEq(stakedZlpTracker.depositedBalances(user, address(feeZlpTracker)), senderStakedBefore - amount);
+        assertEq(feeZlpTracker.depositedBalances(receiver, address(zlp)), recvFeeBefore + amount);
+        assertEq(stakedZlpTracker.depositedBalances(receiver, address(feeZlpTracker)), recvStakedBefore + amount);
     }
 
     function testDisablePreventsTransfer() public {

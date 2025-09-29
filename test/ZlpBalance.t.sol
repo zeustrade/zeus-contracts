@@ -5,7 +5,7 @@ import "./helpers/TestBase.sol";
 import {DeployAll} from "./helpers/DeployAll.sol";
 import {IZlpManager} from "../contracts/exchange/core/interfaces/IZlpManager.sol";
 import {IERC20} from "../contracts/exchange/libraries/token/IERC20.sol";
-import {ZlpBalance} from "../contracts/exchange/staking/ZusBalance.sol";
+import {ZlpBalance} from "../contracts/exchange/staking/ZlpBalance.sol";
 
 contract ZlpBalanceTest is DeployAll {
     ZlpBalance public zlpBalance;

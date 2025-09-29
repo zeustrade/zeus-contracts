@@ -31,6 +31,7 @@ import {Reader} from "../contracts/exchange/peripherals/Reader.sol";
 import {RewardRouterV2} from "../contracts/exchange/staking/RewardRouterV2.sol";
 import {RewardTracker} from "../contracts/exchange/staking/RewardTracker.sol";
 import {RewardDistributor} from "../contracts/exchange/staking/RewardDistributor.sol";
+import {StakedZlp} from "../contracts/exchange/staking/StakedZlp.sol";
 
 import {USDG} from "../contracts/exchange/tokens/USDG.sol";
 import {ZLP} from "../contracts/exchange/zus/ZLP.sol";
@@ -91,6 +92,7 @@ contract DeployAll is Script {
     RewardTracker public stakedZlpTracker;
     RewardDistributor public stakedZlpDistributor;
     RewardRouterV2 public rewardRouter;
+    StakedZlp public stakedZlp;
 
     function run() external {
         address deployer = vm.envAddress("DEPLOYER");
@@ -215,6 +217,9 @@ contract DeployAll is Script {
             address(stakedZlpTracker),
             address(zlpManager)
         );
+
+        // Deploy StakedZlp contract
+        stakedZlp = new StakedZlp(address(zlp), zlpManager, address(stakedZlpTracker), address(feeZlpTracker));
 
         timelock = new Timelock(
             deployer,
@@ -457,6 +462,17 @@ contract DeployAll is Script {
         feeZlpTracker.setHandler(address(rewardRouter), true);
         stakedZlpTracker.setHandler(address(rewardRouter), true);
 
+        stakedZusTracker.setInPrivateTransferMode(true);
+        feeZlpTracker.setInPrivateTransferMode(true);
+        stakedZlpTracker.setInPrivateTransferMode(true);
+
+        feeZlpTracker.setHandler(address(stakedZlp), true);
+        stakedZlpTracker.setHandler(address(stakedZlp), true);
+
+        stakedZusTracker.setHandler(deployer, true);
+        feeZlpTracker.setHandler(deployer, true);
+        stakedZlpTracker.setHandler(deployer, true);
+
         VaultErrorController vec = new VaultErrorController();
         vault.setErrorController(deployer);
         vault.setError(0, "Vault: zero error");
@@ -537,6 +553,7 @@ contract DeployAll is Script {
         console2.log("USDG:", address(usdg));
         console2.log("ZLP:", address(zlp));
         console2.log("ZlpManager:", address(zlpManager));
+        console2.log("StakedZlp:", address(stakedZlp));
         console2.log("Timelock:", address(timelock));
         console2.log("WETH:", weth);
         console2.log("USDC:", usdc);

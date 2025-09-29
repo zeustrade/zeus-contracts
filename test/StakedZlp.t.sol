@@ -33,7 +33,7 @@ contract StakedZlpTest is DeployAll {
         uint256 minted = _mintAndStakeZlpETH(user, 1 ether);
         assertGt(minted, 0);
 
-        assertEq(stakedZlp.balanceOf(user), feeZlpTracker.depositBalances(user, address(zlp)));
+        assertEq(stakedZlp.balanceOf(user), feeZlpTracker.depositedBalances(user, address(zlp)));
         assertEq(stakedZlp.totalSupply(), stakedZlpTracker.totalSupply());
     }
 
@@ -48,15 +48,15 @@ contract StakedZlpTest is DeployAll {
             abi.encode(block.timestamp - COOLDOWN_DURATION - 1)
         );
 
-        uint256 senderDepositBefore = feeZlpTracker.depositBalances(user, address(zlp));
-        uint256 receiverDepositBefore = feeZlpTracker.depositBalances(receiver, address(zlp));
+        uint256 senderDepositBefore = feeZlpTracker.depositedBalances(user, address(zlp));
+        uint256 receiverDepositBefore = feeZlpTracker.depositedBalances(receiver, address(zlp));
 
         vm.prank(user);
         bool ok = stakedZlp.transfer(receiver, amount);
         assertTrue(ok);
 
-        assertEq(feeZlpTracker.depositBalances(user, address(zlp)), senderDepositBefore - amount);
-        assertEq(feeZlpTracker.depositBalances(receiver, address(zlp)), receiverDepositBefore + amount);
+        assertEq(feeZlpTracker.depositedBalances(user, address(zlp)), senderDepositBefore - amount);
+        assertEq(feeZlpTracker.depositedBalances(receiver, address(zlp)), receiverDepositBefore + amount);
     }
 
     function testApproveAndTransferFromDecreasesAllowance() public {
@@ -97,14 +97,14 @@ contract StakedZlpTest is DeployAll {
         stakedZlp.approve(spender, minted / 2);
 
         uint256 amount = minted / 2;
-        uint256 senderDepositBefore = feeZlpTracker.depositBalances(user, address(zlp));
-        uint256 receiverDepositBefore = feeZlpTracker.depositBalances(receiver, address(zlp));
+        uint256 senderDepositBefore = feeZlpTracker.depositedBalances(user, address(zlp));
+        uint256 receiverDepositBefore = feeZlpTracker.depositedBalances(receiver, address(zlp));
 
         vm.prank(spender);
         bool ok = stakedZlp.transferFrom(user, receiver, amount);
         assertTrue(ok);
 
-        assertEq(feeZlpTracker.depositBalances(user, address(zlp)), senderDepositBefore - amount);
-        assertEq(feeZlpTracker.depositBalances(receiver, address(zlp)), receiverDepositBefore + amount);
+        assertEq(feeZlpTracker.depositedBalances(user, address(zlp)), senderDepositBefore - amount);
+        assertEq(feeZlpTracker.depositedBalances(receiver, address(zlp)), receiverDepositBefore + amount);
     }
 }
