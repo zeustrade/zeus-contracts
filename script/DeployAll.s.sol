@@ -461,10 +461,8 @@ contract DeployAll is Script {
         stakedZusTracker.setHandler(address(rewardRouter), true);
         feeZlpTracker.setHandler(address(rewardRouter), true);
         stakedZlpTracker.setHandler(address(rewardRouter), true);
-
-        stakedZusTracker.setInPrivateTransferMode(true);
-        feeZlpTracker.setInPrivateTransferMode(true);
-        stakedZlpTracker.setInPrivateTransferMode(true);
+        // Allow stakedZlpTracker to move feeZlpTracker balances during staking flows
+        feeZlpTracker.setHandler(address(stakedZlpTracker), true);
 
         feeZlpTracker.setHandler(address(stakedZlp), true);
         stakedZlpTracker.setHandler(address(stakedZlp), true);

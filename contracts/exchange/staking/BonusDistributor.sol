@@ -19,6 +19,7 @@ contract BonusDistributor is IRewardDistributor, ReentrancyGuard, Governable {
     uint256 public constant BONUS_DURATION = 365 days;
 
     uint256 public bonusMultiplierBasisPoints;
+    uint256 public bonusStartTime;
 
     address public override rewardToken;
     uint256 public lastDistributionTime;
@@ -68,18 +69,29 @@ contract BonusDistributor is IRewardDistributor, ReentrancyGuard, Governable {
 
     function setBonusMultiplier(uint256 _bonusMultiplierBasisPoints) external onlyAdmin {
         require(lastDistributionTime != 0, "BonusDistributor: invalid lastDistributionTime");
+        if (bonusStartTime == 0 && _bonusMultiplierBasisPoints > 0) {
+            bonusStartTime = block.timestamp;
+        }
+
         IRewardTracker(rewardTracker).updateRewards();
         bonusMultiplierBasisPoints = _bonusMultiplierBasisPoints;
         emit BonusMultiplierChange(_bonusMultiplierBasisPoints);
     }
 
     function tokensPerInterval() public view override returns (uint256) {
+        if (bonusStartTime > 0 && block.timestamp > bonusStartTime.add(BONUS_DURATION)) {
+            return 0;
+        }
+
         uint256 supply = IERC20(rewardTracker).totalSupply();
         return supply.mul(bonusMultiplierBasisPoints).div(BASIS_POINTS_DIVISOR).div(BONUS_DURATION);
     }
 
     function pendingRewards() public view override returns (uint256) {
         if (block.timestamp == lastDistributionTime) {
+            return 0;
+        }
+        if (bonusStartTime > 0 && block.timestamp > bonusStartTime.add(BONUS_DURATION)) {
             return 0;
         }
 

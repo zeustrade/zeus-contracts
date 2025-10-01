@@ -166,6 +166,13 @@ contract DeployAll is TestBase {
         stakedZusTracker.setHandler(address(rewardRouter), true);
         feeZlpTracker.setHandler(address(rewardRouter), true);
         stakedZlpTracker.setHandler(address(rewardRouter), true);
+        // Allow stakedZlpTracker to move feeZlpTracker balances during staking flows
+        feeZlpTracker.setHandler(address(stakedZlpTracker), true);
+
+        zlpManager.setHandler(address(zlpManager), true);
+        stakedZusTracker.setHandler(address(stakedZusTracker), true);
+        feeZlpTracker.setHandler(address(feeZlpTracker), true);
+        stakedZlpTracker.setHandler(address(stakedZlpTracker), true);
 
         vm.stopPrank();
     }

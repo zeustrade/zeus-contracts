@@ -51,6 +51,7 @@ contract RewardTracker is IERC20, ReentrancyGuard, IRewardTracker, Governable {
     constructor(string memory _name, string memory _symbol) public {
         name = _name;
         symbol = _symbol;
+        inPrivateTransferMode = true;
     }
 
     function initialize(address[] memory _depositTokens, address _distributor) external onlyGov {
